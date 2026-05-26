@@ -825,20 +825,11 @@ def scan_scripts() -> dict:
                 continue
             yield dirpath, filenames
 
-    script_like_hints = (
-        "scripts",
-        "script",
-        "autoexec",
-        "executor",
-        "exploit",
-        "roblox",
-        "krnl",
-        "synapse",
-        "fluxus",
-        "wave",
-        "solara",
-        "hydrogen",
-    )
+    # Padrão: só formatos que são efetivamente script.
+    # Modo estrito: inclui .txt (mais cobertura, porém mais falso positivo).
+    script_extensions = (".lua", ".luau")
+    if SCRIPTS_STRICT_MODE:
+        script_extensions = script_extensions + (".txt",)
 
     for path_template in SCRIPT_SEARCH_PATHS:
         base = _expand(path_template)
@@ -848,18 +839,9 @@ def scan_scripts() -> dict:
         try:
             for dirpath, filenames in walk_capped(base, SCRIPT_SEARCH_MAX_DEPTH):
                 for f in filenames:
-                    if not f.lower().endswith(SCRIPT_EXTENSIONS):
+                    if not f.lower().endswith(script_extensions):
                         continue
                     full = os.path.join(dirpath, f)
-                    lower_name = f.lower()
-                    lower_full = full.lower()
-
-                    # .txt em Downloads/Desktop gera muitos falsos positivos.
-                    # Só considera .txt quando o contexto parece script/executor.
-                    if lower_name.endswith(".txt") and not SCRIPTS_STRICT_MODE:
-                        context = f"{os.path.basename(dirpath).lower()} {lower_name} {lower_full}"
-                        if not any(hint in context for hint in script_like_hints):
-                            continue
 
                     try:
                         size = os.path.getsize(full)

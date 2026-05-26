@@ -37,7 +37,9 @@ python telador.py --webhook URL_DO_WEBHOOK
 python telador.py --strict-scripts
 ```
 
-`--strict-scripts` ativa análise agressiva de `.txt` genéricos no scanner de scripts.
+No modo padrão, o scanner de scripts analisa `.lua` e `.luau`.
+
+`--strict-scripts` ativa análise agressiva incluindo `.txt` genéricos.
 Útil para investigação profunda, mas pode aumentar falso positivo.
 
 ## Build do executável
