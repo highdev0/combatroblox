@@ -7,8 +7,10 @@ Ferramenta de auditoria local para Windows que executa checagens forenses e de p
 Se você vai compartilhar com outras pessoas, manda este guia:
 
 - [TUTORIAL.md](TUTORIAL.md)
+- [INICIAR.bat](INICIAR.bat)
 
-Ele tem passo a passo para usuário leigo com comandos de copiar e colar.
+Fluxo mais fácil para usuário final: baixar, extrair e dar 2 cliques em `INICIAR.bat`.
+Ele abre o `.exe` se existir; se não existir, roda via Python automaticamente.
 
 ## Aviso Importante
 
@@ -39,8 +41,7 @@ pip install -r requirements.txt
 
 ```powershell
 cd "C:\Users\SEU_USUARIO\Desktop\combat-roblox"
-python -m pip install -r requirements.txt
-python telador.py
+./INICIAR.bat
 ```
 
 ## Uso
