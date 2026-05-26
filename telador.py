@@ -365,6 +365,8 @@ def main():
     parser.add_argument("--threads",       type=int, default=4, help="Threads em paralelo (default 4)")
     parser.add_argument("--json",          action="store_true", help="Também salvar relatório JSON")
     parser.add_argument("--webhook",       type=str, default=None, help="URL do webhook do Discord")
+    parser.add_argument("--strict-scripts",action="store_true",
+                        help="Modo agressivo no scanner de scripts (.txt genérico também entra)")
     parser.add_argument("--only",          type=str, default=None,
                         help="Rodar só checagens específicas (separadas por vírgula)")
     args = parser.parse_args()
@@ -405,6 +407,12 @@ def main():
     only_list = None
     if args.only:
         only_list = [s.strip().lower() for s in args.only.split(",")]
+
+    scanners.set_scripts_strict_mode(args.strict_scripts)
+    if args.strict_scripts:
+        print(f"{YELLOW}● Modo de scripts: estrito{RESET} {GREY}(.txt genérico será analisado){RESET}")
+    else:
+        print(f"{GREEN}● Modo de scripts: anti-falso-positivo{RESET}")
 
     sys_info = scanners.system_info()
     chain = assemble_scanners(args.no_forensics, args.no_antievasion, args.no_persistence)

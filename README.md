@@ -34,7 +34,11 @@ python telador.py
 python telador.py --no-open
 python telador.py --json
 python telador.py --webhook URL_DO_WEBHOOK
+python telador.py --strict-scripts
 ```
+
+`--strict-scripts` ativa análise agressiva de `.txt` genéricos no scanner de scripts.
+Útil para investigação profunda, mas pode aumentar falso positivo.
 
 ## Build do executável
 

@@ -56,6 +56,18 @@ except ImportError:
     HAS_WINREG = False
 
 
+# Controla se .txt genéricos entram no scanner de scripts.
+# False = modo anti-falso-positivo (default)
+# True  = modo estrito (comportamento mais agressivo)
+SCRIPTS_STRICT_MODE = False
+
+
+def set_scripts_strict_mode(enabled: bool) -> None:
+    """Liga/desliga modo estrito do scanner de scripts."""
+    global SCRIPTS_STRICT_MODE
+    SCRIPTS_STRICT_MODE = bool(enabled)
+
+
 # ----------------------------- Helpers -----------------------------
 
 def _expand(path: str) -> str:
@@ -844,7 +856,7 @@ def scan_scripts() -> dict:
 
                     # .txt em Downloads/Desktop gera muitos falsos positivos.
                     # Só considera .txt quando o contexto parece script/executor.
-                    if lower_name.endswith(".txt"):
+                    if lower_name.endswith(".txt") and not SCRIPTS_STRICT_MODE:
                         context = f"{os.path.basename(dirpath).lower()} {lower_name} {lower_full}"
                         if not any(hint in context for hint in script_like_hints):
                             continue
