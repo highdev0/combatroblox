@@ -1,4 +1,4 @@
-# Tutorial Simples (Para Qualquer Pessoa)
+# Tutorial Simples (2 Cliques)
 
 Este guia e para quem nao manja de terminal.
 
@@ -9,79 +9,44 @@ Este guia e para quem nao manja de terminal.
 3. Clique em Download ZIP.
 4. Extraia o ZIP em uma pasta facil (exemplo: Desktop).
 
-## 2. Abrir no lugar certo
+## 2. Rodar com 2 cliques
 
-1. Abra a pasta extraida.
-2. Clique na barra de endereco da pasta.
-3. Digite `powershell` e aperte Enter.
-4. Vai abrir o PowerShell ja nessa pasta.
+1. Entre na pasta extraida.
+2. Clique duas vezes em `INICIAR.bat`.
 
-## 3. Instalar dependencias (uma vez so)
+Pronto. O launcher faz sozinho:
 
-Copie e cole este comando:
+1. Se existir `dist\telador.exe`, abre o executavel.
+2. Se nao existir, usa Python e instala dependencias automaticamente.
 
-```powershell
-python -m pip install -r requirements.txt
-```
+## 3. Ler o resultado
 
-## 4. Rodar o scan normal (recomendado)
+1. `VEREDITO: LIMPO` = nao encontrou vestigio.
+2. `SUSPEITO` ou `CHEATER` = abrir o HTML e revisar item por item.
 
-Copie e cole:
+## 4. Quando der erro
 
-```powershell
-python telador.py
-```
+### Python nao reconhecido
 
-## 5. Ler o resultado
+1. Reinstale o Python 3.10+.
+2. Marque `Add Python to PATH` na instalacao.
+3. Feche e abra novamente.
 
-- Se aparecer `VEREDITO: LIMPO`, nao encontrou vestigio.
-- Se aparecer `SUSPEITO` ou `CHEATER`, abra o HTML e veja qual item bateu.
+### Ainda abriu relatorio velho
 
-## 6. Modo recomendado para evitar falso positivo
-
-Use o modo padrao (sem flag extra).
-
-## 7. Modo agressivo (somente investigacao)
-
-Este modo e mais pesado e pode aumentar falso positivo:
-
-```powershell
-python telador.py --strict-scripts
-```
-
-## 8. Teste rapido so do scanner de scripts
-
-```powershell
-python telador.py --no-confirm --no-open --only scripts
-```
-
-## 9. Erros comuns
-
-### `python` nao reconhecido
-
-1. Reinstale o Python.
-2. Marque a opcao `Add Python to PATH` na instalacao.
-3. Feche e abra o terminal novamente.
-
-### Ainda aparece relatorio velho
-
-Apague relatorios antigos do Temp:
+No PowerShell, rode:
 
 ```powershell
 Remove-Item "$env:LOCALAPPDATA\Temp\telador_relatorio_*.html" -ErrorAction SilentlyContinue
 Remove-Item "$env:LOCALAPPDATA\Temp\telador_relatorio_*.json" -ErrorAction SilentlyContinue
 ```
 
-## 10. Build do executavel (opcional)
+## 5. Modo avancado (opcional)
 
-Se quiser gerar `.exe`:
-
-```powershell
-.\build.bat
-```
-
-Depois rode:
+Se quiser rodar manual no terminal:
 
 ```powershell
-.\dist\telador.exe
+python telador.py
+python telador.py --strict-scripts
+python telador.py --no-confirm --no-open --only scripts
 ```
