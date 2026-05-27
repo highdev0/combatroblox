@@ -767,6 +767,252 @@ CLEANER_NAMES = {
     "fsutil usn deletejournal": "high",
 }
 
+# ----------------------------- PowerShell / CMD history -----------------------------
+
+POWERSHELL_HISTORY_PATH = r"%APPDATA%\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt"
+
+POWERSHELL_RED_FLAGS = {
+    # One-liner installers (clássico de instalação de cheat por DM)
+    "iex ":                    "high",
+    "iex(":                    "high",
+    "invoke-expression":       "high",
+    "irm ":                    "high",
+    "invoke-restmethod":       "high",
+    "iwr ":                    "high",
+    "invoke-webrequest":       "high",
+    "downloadstring":          "high",
+    "downloadfile":            "high",
+    "new-object net.webclient":"medium",
+
+    # Windows Defender bypass
+    "set-mppreference":              "high",
+    "add-mppreference":              "high",
+    "-exclusionpath":                "high",
+    "-exclusionprocess":             "high",
+    "-disablerealtimemonitoring":    "high",
+    "-disablebehaviormonitoring":    "high",
+    "-disableioavprotection":        "high",
+
+    # Anti-forense
+    "attrib +h":                "medium",
+    "cipher /w":                "high",
+    "fsutil usn":               "high",
+    "sdelete":                  "high",
+    "wevtutil cl":              "high",
+    "clear-eventlog":           "high",
+    "wmic shadowcopy delete":   "high",
+    "vssadmin delete":          "high",
+    "remove-item -recurse -force": "low",
+
+    # AMSI bypass
+    "amsiscanbuffer":           "high",
+    "amsiinitfailed":           "high",
+    "amsicontext":              "high",
+
+    # Reflection / loading in-memory
+    "system.reflection.assembly":"medium",
+    "[reflection.assembly]":     "medium",
+    "loadwithpartialname":       "medium",
+
+    # Download alternativos
+    "curl ":                    "low",
+    "wget ":                    "low",
+    "bitsadmin /transfer":      "high",
+    "start-bitstransfer":       "high",
+
+    # Encoded commands
+    "-encodedcommand":          "high",
+    "-enc ":                    "high",
+    "frombase64string":         "medium",
+
+    # Bypass execution policy
+    "executionpolicy bypass":           "high",
+    "set-executionpolicy unrestricted": "high",
+    "set-executionpolicy bypass":       "high",
+
+    # Hidden window / non-interactive
+    "-windowstyle hidden":      "medium",
+    "-noninteractive":          "low",
+    "-noprofile":               "low",
+
+    # PowerShell remoting suspeito
+    "invoke-command":           "low",
+}
+
+# Win+R history no registry (clássico - cara digitou caminho de cheat)
+RUNMRU_KEY = r"Software\Microsoft\Windows\CurrentVersion\Explorer\RunMRU"
+
+# Typed paths (Explorer address bar)
+TYPED_PATHS_KEY = r"Software\Microsoft\Windows\CurrentVersion\Explorer\TypedPaths"
+
+# ----------------------------- Macro Mouse Software -----------------------------
+
+# Software fabricante: detectar presença + ler scripts/configs
+MOUSE_SOFTWARE = {
+    "logitech_ghub": {
+        "name": "Logitech G HUB",
+        "paths": [
+            r"%LOCALAPPDATA%\LGHUB",
+            r"%PROGRAMDATA%\LGHUB",
+            r"%PROGRAMFILES%\LGHUB",
+        ],
+        # Scripts Lua ficam aqui (motor Lua interno = pode escrever cheat-like macros)
+        "script_paths": [
+            r"%LOCALAPPDATA%\LGHUB\settings.db",         # SQLite com scripts
+            r"%LOCALAPPDATA%\LGHUB\depot_cache",
+        ],
+    },
+    "logitech_gaming_software": {
+        "name": "Logitech Gaming Software (legacy)",
+        "paths": [
+            r"%PROGRAMFILES%\LGS",
+            r"%PROGRAMFILES(X86)%\Logitech Gaming Software",
+            r"%LOCALAPPDATA%\Logitech\Logitech Gaming Software",
+        ],
+        "script_paths": [],
+    },
+    "razer_synapse": {
+        "name": "Razer Synapse",
+        "paths": [
+            r"%PROGRAMFILES(X86)%\Razer",
+            r"%LOCALAPPDATA%\Razer",
+            r"%APPDATA%\Razer",
+        ],
+        "script_paths": [
+            r"%APPDATA%\Razer\Synapse3\Accounts",
+            r"%LOCALAPPDATA%\Razer\Synapse3\Log",
+        ],
+    },
+    "bloody": {
+        "name": "Bloody (A4Tech)",
+        "paths": [
+            r"%PROGRAMFILES(X86)%\Bloody6",
+            r"%PROGRAMFILES(X86)%\Bloody7",
+            r"%PROGRAMFILES%\Bloody6",
+            r"%PROGRAMFILES%\Bloody7",
+            r"%LOCALAPPDATA%\Bloody",
+        ],
+        "script_paths": [],
+    },
+    "xmouse": {
+        "name": "X-Mouse Button Control",
+        "paths": [
+            r"%PROGRAMFILES%\Highresolution Enterprises\X-Mouse Button Control",
+            r"%PROGRAMFILES(X86)%\Highresolution Enterprises\X-Mouse Button Control",
+            r"%APPDATA%\Highresolution Enterprises\XMouseButtonControl",
+        ],
+        "script_paths": [
+            r"%APPDATA%\Highresolution Enterprises\XMouseButtonControl",
+        ],
+    },
+    "steelseries_gg": {
+        "name": "SteelSeries GG",
+        "paths": [
+            r"%PROGRAMFILES%\SteelSeries\SteelSeries GG",
+            r"%PROGRAMFILES(X86)%\SteelSeries\SteelSeries GG",
+            r"%APPDATA%\SteelSeries\SteelSeries Engine 3",
+        ],
+        "script_paths": [],
+    },
+    "corsair_icue": {
+        "name": "Corsair iCUE",
+        "paths": [
+            r"%PROGRAMFILES(X86)%\Corsair\CORSAIR iCUE Software",
+            r"%PROGRAMFILES%\Corsair\CORSAIR iCUE 4 Software",
+            r"%PROGRAMFILES%\Corsair\CORSAIR iCUE 5 Software",
+        ],
+        "script_paths": [],
+    },
+    "hyperx_ngenuity": {
+        "name": "HyperX NGENUITY",
+        "paths": [
+            r"%PROGRAMFILES%\HP\HyperX NGENUITY",
+            r"%PROGRAMFILES(X86)%\HyperX",
+        ],
+        "script_paths": [],
+    },
+    "redragon": {
+        "name": "Redragon software",
+        "paths": [
+            r"%PROGRAMFILES(X86)%\Redragon",
+            r"%PROGRAMFILES%\Redragon",
+        ],
+        "script_paths": [],
+    },
+}
+
+# Keywords pra procurar em scripts de macro
+MACRO_RED_FLAGS = {
+    "no recoil":          "high",
+    "norecoil":           "high",
+    "anti recoil":        "high",
+    "antirecoil":         "high",
+    "recoil control":     "high",
+    "recoil compensation":"high",
+    "rcs script":         "high",
+    "auto headshot":      "high",
+    "autoheadshot":       "high",
+    "aim assist":         "medium",
+    "aimassist":          "medium",
+    "auto fire":          "medium",
+    "autofire":           "medium",
+    "rapid fire":         "medium",
+    "rapidfire":          "medium",
+    "burst fire":         "medium",
+    "burstfire":          "medium",
+    "auto click":         "medium",
+    "autoclick":          "medium",
+    "spam click":         "medium",
+    "spamclick":          "medium",
+    "movemouserelative":  "medium",  # Logitech API usada em macros pesadas
+    "pressmousebutton":   "low",
+    "releasemousebutton": "low",
+    "pressandreleasemousebutton":"low",
+    "getmkeystate":       "low",
+    "outputlogmessage":   "low",
+    "enableprimarymousebuttonevents": "medium",
+    "valorant":           "low",     # macros pra outros jogos = red flag por hábito
+    "cs:go":              "low",
+    "csgo":               "low",
+    "rust":               "low",
+}
+
+# ----------------------------- DLL injection scan -----------------------------
+
+# Nomes de processo do Roblox client a verificar
+ROBLOX_PROCESS_NAMES = [
+    "RobloxPlayerBeta.exe",
+    "RobloxPlayerLauncher.exe",
+    "Windows10Universal.exe",
+    "Roblox.exe",
+    "RobloxStudioBeta.exe",
+]
+
+# Pastas onde DLLs LEGÍTIMAS do Windows residem
+TRUSTED_DLL_PATHS = [
+    r"c:\windows\system32",
+    r"c:\windows\syswow64",
+    r"c:\windows\winsxs",
+    r"c:\program files\windowsapps",
+    r"c:\program files (x86)\microsoft",
+    r"c:\program files\common files\microsoft shared",
+    r"c:\program files (x86)\common files\microsoft shared",
+    r"c:\program files\windows defender",
+    r"c:\program files (x86)\nvidia corporation",
+    r"c:\program files\nvidia corporation",
+]
+
+# Pastas onde DLL injetada é SUSPEITA (cheats geralmente caem aqui)
+SUSPICIOUS_DLL_PATHS = [
+    r"\appdata\local\temp",
+    r"\appdata\roaming\temp",
+    r"\temp\\",
+    r"\downloads\\",
+    r"\desktop\\",
+    r"\documents\\",
+    r"\users\public\\",
+]
+
 # ----------------------------- Bloxstrap / Bytecode -----------------------------
 
 BLOXSTRAP_PATHS = [

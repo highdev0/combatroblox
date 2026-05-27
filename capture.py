@@ -201,9 +201,72 @@ def capture_roblox_window(output_dir: str = None) -> str | None:
         return None
 
 
+def _enum_monitors() -> list[tuple[int, int, int, int]]:
+    """Retorna lista de rects de todos os monitores: [(left, top, width, height), ...]"""
+    monitors = []
+
+    MonitorEnumProc = ctypes.WINFUNCTYPE(
+        ctypes.c_bool,
+        wintypes.HMONITOR,
+        wintypes.HDC,
+        ctypes.POINTER(wintypes.RECT),
+        ctypes.c_void_p,
+    )
+
+    def callback(_hmonitor, _hdc, lprect, _data):
+        r = lprect.contents
+        monitors.append((r.left, r.top, r.right - r.left, r.bottom - r.top))
+        return True
+
+    user32.EnumDisplayMonitors(None, None, MonitorEnumProc(callback), 0)
+    return monitors
+
+
+def capture_all_monitors(output_dir: str = None) -> list[str]:
+    """
+    Captura TODOS os monitores conectados separadamente.
+    Cheater experiente bota cheat no monitor 2 (HUD externo, mira, etc.) —
+    capturar só primary não pega.
+    """
+    monitors = _enum_monitors()
+    paths = []
+
+    if output_dir is None:
+        output_dir = tempfile.gettempdir()
+
+    base_ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    for i, (left, top, w, h) in enumerate(monitors, 1):
+        cap = _capture_rect(left, top, w, h)
+        if cap is None:
+            continue
+        out_path = os.path.join(output_dir, f"telador_monitor{i}_{base_ts}.png")
+        try:
+            png_bytes = _bgra_to_png_bytes(*cap)
+            with open(out_path, "wb") as fh:
+                fh.write(png_bytes)
+            paths.append(out_path)
+        except (OSError, MemoryError):
+            continue
+
+    return paths
+
+
 def capture_all() -> dict:
-    """Captura desktop + Roblox window. Retorna dict de paths."""
-    return {
-        "desktop": capture_desktop(),
-        "roblox":  capture_roblox_window(),
-    }
+    """
+    Captura desktop primário + janela do Roblox + TODOS os monitores secundários.
+    Retorna dict ordenado:
+      {"monitor_1": ..., "monitor_2": ..., ..., "roblox": ...}
+    """
+    result = {}
+
+    monitor_paths = capture_all_monitors()
+    for i, path in enumerate(monitor_paths, 1):
+        result[f"monitor_{i}"] = path
+
+    # Se não conseguiu pegar nada via EnumDisplayMonitors, cai pra desktop primary
+    if not monitor_paths:
+        result["desktop"] = capture_desktop()
+
+    result["roblox"] = capture_roblox_window()
+    return result
