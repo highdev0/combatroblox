@@ -4,8 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [3.0.0] - 2026-05-27
 
-Major release focused on detection depth — features that separate a
-beginner telador from a chief telador. **34 scanners** total (was 25).
+Major release focused on detection depth — extra coverage layer for
+deeper SS analysis. **34 scanners** total (was 25).
 
 ### Added
 
