@@ -198,7 +198,7 @@ def _render_screenshots(screenshots: dict) -> str:
         return ""
 
     pieces = []
-    label_map = {"desktop": "Desktop completo", "roblox": "Janela do Roblox"}
+    label_map = {"desktop": "Desktop primário", "roblox": "Janela do Roblox"}
     for key, path in screenshots.items():
         if not path or not os.path.isfile(path):
             continue
@@ -207,9 +207,16 @@ def _render_screenshots(screenshots: dict) -> str:
                 b64 = base64.b64encode(fh.read()).decode("ascii")
         except OSError:
             continue
+
+        if key.startswith("monitor_"):
+            num = key.split("_", 1)[1]
+            label = f"Monitor {num}"
+        else:
+            label = label_map.get(key, key)
+
         pieces.append(f"""
         <div class="shot">
-            <div class="shot-label">{_escape(label_map.get(key, key))}</div>
+            <div class="shot-label">{_escape(label)}</div>
             <img src="data:image/png;base64,{b64}" alt="{_escape(key)}" />
         </div>
         """)

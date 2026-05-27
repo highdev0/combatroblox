@@ -58,11 +58,12 @@ python -m PyInstaller ^
     --hidden-import psutil ^
     --hidden-import winreg ^
     --hidden-import sqlite3 ^
-    --hidden-import urllib.request ^
-    --hidden-import urllib.error ^
-    --hidden-import mimetypes ^
     --hidden-import zlib ^
     --hidden-import ctypes.wintypes ^
+    --hidden-import concurrent.futures ^
+    --hidden-import live_analysis ^
+    --hidden-import command_history ^
+    --hidden-import peripherals ^
     --collect-submodules psutil ^
     telador.py
 

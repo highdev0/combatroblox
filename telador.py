@@ -34,6 +34,9 @@ import scanners
 import forensics
 import antievasion
 import persistence
+import live_analysis
+import command_history
+import peripherals
 import capture
 import report
 
@@ -78,7 +81,7 @@ BANNER = r"""
 
 def print_banner():
     print(f"{RED}{BANNER}{RESET}")
-    print(f"{GREY}  Versão 3.1  ·  25 scanners  ·  542 signatures  ·  Paralelo  ·  100% local{RESET}\n")
+    print(f"{GREY}  Versão 3.0  ·  34 scanners  ·  DLL live scan  ·  PS history  ·  Multi-monitor  ·  Macros{RESET}\n")
 
 
 def is_admin() -> bool:
@@ -109,8 +112,17 @@ def severity_to_color(sev: str) -> str:
 
 
 def assemble_scanners(skip_forensics: bool, skip_antievasion: bool,
-                       skip_persistence: bool = False) -> list:
+                       skip_persistence: bool = False,
+                       skip_live: bool = False,
+                       skip_history: bool = False,
+                       skip_peripherals: bool = False) -> list:
     chain = list(scanners.ALL_SCANNERS)
+    if not skip_live:
+        chain.extend(live_analysis.ALL_LIVE_ANALYSIS_SCANNERS)
+    if not skip_history:
+        chain.extend(command_history.ALL_COMMAND_HISTORY_SCANNERS)
+    if not skip_peripherals:
+        chain.extend(peripherals.ALL_PERIPHERAL_SCANNERS)
     if not skip_persistence:
         chain.extend(persistence.ALL_PERSISTENCE_SCANNERS)
     if not skip_antievasion:
@@ -324,6 +336,9 @@ def main():
     parser.add_argument("--no-forensics",  action="store_true", help="Pular Amcache/BAM/JumpLists")
     parser.add_argument("--no-antievasion",action="store_true", help="Pular VM/Sandbox/Clock checks")
     parser.add_argument("--no-persistence",action="store_true", help="Pular Startup/Run/Tasks/WER")
+    parser.add_argument("--no-live",       action="store_true", help="Pular DLL injection scan + process tree")
+    parser.add_argument("--no-history",    action="store_true", help="Pular PowerShell/RunMRU/TypedPaths")
+    parser.add_argument("--no-peripherals",action="store_true", help="Pular detecção de macros de mouse")
     parser.add_argument("--no-parallel",   action="store_true", help="Rodar sequencial (debug)")
     parser.add_argument("--threads",       type=int, default=4, help="Threads em paralelo (default 4)")
     parser.add_argument("--json",          action="store_true", help="Também salvar relatório JSON")
@@ -350,11 +365,12 @@ def main():
     # 1. Screenshot (antes das checagens, no estado "fresh")
     screenshots = {}
     if not args.no_screenshot:
-        print(f"{CYAN}[SS]{RESET} Capturando tela do desktop e janela do Roblox...", end=" ", flush=True)
+        print(f"{CYAN}[SS]{RESET} Capturando TODOS os monitores + janela do Roblox...", end=" ", flush=True)
         try:
             screenshots = capture.capture_all()
             took = sum(1 for v in screenshots.values() if v)
-            print(f"{GREEN}{took}/2 ok{RESET}")
+            total = len(screenshots)
+            print(f"{GREEN}{took}/{total} ok{RESET}")
         except Exception as e:
             print(f"{YELLOW}falhou: {e}{RESET}")
             screenshots = {}
@@ -371,7 +387,14 @@ def main():
         print(f"{GREEN}● Modo de scripts: anti-falso-positivo{RESET}")
 
     sys_info = scanners.system_info()
-    chain = assemble_scanners(args.no_forensics, args.no_antievasion, args.no_persistence)
+    chain = assemble_scanners(
+        skip_forensics=args.no_forensics,
+        skip_antievasion=args.no_antievasion,
+        skip_persistence=args.no_persistence,
+        skip_live=args.no_live,
+        skip_history=args.no_history,
+        skip_peripherals=args.no_peripherals,
+    )
 
     if args.no_parallel:
         findings = run_scanners(chain, only=only_list)

@@ -2,6 +2,62 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.0.0] - 2026-05-27
+
+Major release focused on detection depth — features that separate a
+beginner telador from a chief telador. **34 scanners** total (was 25).
+
+### Added
+
+#### 🧬 Live process analysis (`live_analysis.py`)
+- `scan_roblox_dll_injection` — lists ALL DLLs loaded into running
+  `RobloxPlayerBeta.exe` / `Windows10Universal.exe` processes, flags
+  unsigned DLLs (via `WinVerifyTrust`), DLLs in suspicious paths
+  (`%TEMP%`, `%APPDATA%`, `Downloads`, `Desktop`), and DLLs whose name
+  matches an executor keyword. **Catches injected cheats even if the
+  on-disk file was deleted.**
+- `scan_process_tree` — verifies that Roblox was spawned by a legit
+  parent (`explorer.exe`, `bloxstrap.exe`, `RobloxPlayerLauncher.exe`,
+  major browsers). Suspicious parent = possible injector chain.
+
+#### 📜 Command history (`command_history.py`)
+- `scan_powershell_history` — reads `ConsoleHost_history.txt`, the
+  append-only log of every PowerShell command ever typed. Flags
+  `iex (irm krnl.cat/...)`-style one-liner installers, AMSI bypasses,
+  Defender exclusion mods, `bitsadmin` / `wget` / `curl` downloads,
+  base64-encoded commands, event-log clears, USN journal deletes.
+- `scan_runmru` — Win+R history from HKCU Registry.
+- `scan_typed_paths` — paths typed into the Explorer address bar.
+
+#### 🖱️ Peripheral macros (`peripherals.py`)
+- `scan_mouse_software_installed` — detects G HUB, Logitech Gaming
+  Software, Razer Synapse, Bloody (A4Tech), X-Mouse Button Control,
+  SteelSeries GG, Corsair iCUE, HyperX NGENUITY, Redragon.
+- `scan_logitech_ghub_scripts` — opens G HUB's SQLite `settings.db`,
+  reads stored macro Lua scripts, flags keywords: `no recoil`,
+  `recoil control`, `auto headshot`, `rapid fire`, `aim assist`,
+  `MoveMouseRelative`, etc.
+- `scan_xmouse_profiles` and `scan_razer_synapse` — same logic
+  against their profile/config files.
+
+#### 🖥️ Multi-monitor screenshot (`capture.py`)
+- `capture_all_monitors` enumerates monitors via `EnumDisplayMonitors`
+  and captures each one separately. Default `capture_all()` now
+  captures **every monitor** + Roblox window. Cheater hiding HUD on
+  monitor 2 is now exposed.
+
+### Changed
+- Banner: `v3.0 · 34 scanners · DLL live scan · PS history · Multi-monitor · Macros`.
+- Added CLI flags: `--no-live`, `--no-history`, `--no-peripherals`.
+- Build script: added new hidden imports for the new modules.
+- Database additions: `POWERSHELL_RED_FLAGS` (50+ patterns),
+  `MACRO_RED_FLAGS` (30+ patterns), `MOUSE_SOFTWARE` registry,
+  `ROBLOX_PROCESS_NAMES`, `TRUSTED_DLL_PATHS`, `SUSPICIOUS_DLL_PATHS`.
+
+### Fixed
+- Process tree no longer false-flags when parent process can't be
+  read due to permission (waits for admin).
+
 ## [2.0.0] - 2026-05-27
 
 ### Added
