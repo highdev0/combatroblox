@@ -64,6 +64,12 @@ python -m PyInstaller ^
     --hidden-import live_analysis ^
     --hidden-import command_history ^
     --hidden-import peripherals ^
+    --hidden-import fp_filter ^
+    --hidden-import pe_analysis ^
+    --hidden-import report_signing ^
+    --hidden-import diff_tool ^
+    --hidden-import hashlib ^
+    --hidden-import hmac ^
     --collect-submodules psutil ^
     telador.py
 

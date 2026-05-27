@@ -2,6 +2,56 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.2.0] - 2026-05-27
+
+The "10/10" release. Visual timeline, PE analysis with hash matching,
+signed reports, and SS-to-SS comparison.
+
+### Added
+
+#### 🔬 PE analysis (`pe_analysis.py`)
+- `compute_sha256` — hash de qualquer arquivo (SHA256).
+- `parse_pe_header` — parser nativo (sem deps) que extrai:
+  compile timestamp, sections, machine arch, packer detection
+  (UPX, Themida, VMProtect, Enigma, ASPack, PECompact, MPRESS, PELock).
+- `enrich_findings_with_pe` — pós-processo que pra cada item apontando
+  pra um `.exe/.dll` calcula SHA256 + analisa PE header e anexa ao
+  item. Faz auto-upgrade de severity:
+  - Packed → HIGH (cheat protegido = quase certo)
+  - Compilado nos últimos 30 dias → +1 nível
+  - Hash match contra `KNOWN_EXECUTOR_HASHES` → HIGH
+- Stub `KNOWN_EXECUTOR_HASHES` pronto pra popular com hashes reais.
+
+#### 🕐 Timeline visual (`report.py`)
+- Novo card no relatório com todos os hits plotados num eixo horizontal
+  por timestamp. Cluster denso = burst suspeito (ex: baixou cheat,
+  rodou, deletou em 5 min).
+
+#### 🔏 Report signing (`report_signing.py`)
+- `get_self_hash` — SHA256 do próprio `.exe`. Banner mostra primeiros
+  e últimos 16 chars pra cara comparar com a release publicada.
+- `compute_hmac` / `verify_hmac` — HMAC-SHA256 com chave embedada.
+  Tamper-evident: cara teria que recompilar pra burlar.
+
+#### 📊 SS-to-SS diff (`diff_tool.py`)
+- `save_tsr` — salva relatório em `.tsr` (JSON + HMAC).
+- `load_tsr` — carrega + verifica HMAC, recusa se foi adulterado.
+- `diff_reports` — compara 2 .tsr e retorna added/removed/persistent.
+- `format_diff_console` — output colorido pra console.
+- Nova flag: `--save-tsr PATH` e `--diff OLD.tsr`.
+
+### Changed
+- Banner: `v3.2 · 34 scanners · PE analysis · Timeline · Diff entre SS · HMAC`.
+- Banner agora mostra SHA256 do próprio exe.
+- Report HTML inclui timeline e PE section quando houver dados.
+- Footer HTML mostra SHA256 completo do exe (autenticidade).
+
+### Added — CLI
+- `--no-pe` — pula PE analysis (mais rápido em PCs com muitos exes).
+- `--save-tsr PATH` — salva snapshot assinado pra comparar depois.
+- `--diff OLD.tsr` — compara este scan com um .tsr anterior, mostra
+  hits novos/removidos.
+
 ## [3.1.0] - 2026-05-27
 
 Quality release focused on **reducing false positives** — tool that

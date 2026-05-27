@@ -39,6 +39,9 @@ import command_history
 import peripherals
 import capture
 import fp_filter
+import pe_analysis
+import report_signing
+import diff_tool
 import report
 
 
@@ -82,7 +85,11 @@ BANNER = r"""
 
 def print_banner():
     print(f"{RED}{BANNER}{RESET}")
-    print(f"{GREY}  Versão 3.1  ·  34 scanners  ·  FP-filter  ·  Score ponderado  ·  Dev-aware{RESET}\n")
+    print(f"{GREY}  Versão 3.2  ·  34 scanners  ·  PE analysis  ·  Timeline  ·  Diff entre SS  ·  HMAC{RESET}\n")
+    self_hash = report_signing.get_self_hash()
+    if self_hash:
+        print(f"{GREY}  SHA256 deste exe: {self_hash[:16]}...{self_hash[-16:]}{RESET}")
+        print(f"{GREY}  Compare com a release oficial no GitHub pra confirmar autenticidade.{RESET}\n")
 
 
 def is_admin() -> bool:
@@ -342,6 +349,9 @@ def main():
     parser.add_argument("--no-history",    action="store_true", help="Pular PowerShell/RunMRU/TypedPaths")
     parser.add_argument("--no-peripherals",action="store_true", help="Pular detecção de macros de mouse")
     parser.add_argument("--strict",        action="store_true", help="Desliga filtro de falsos positivos (modo paranoia)")
+    parser.add_argument("--no-pe",         action="store_true", help="Pula PE analysis dos executáveis")
+    parser.add_argument("--save-tsr",      type=str, default=None, help="Salva relatório em .tsr (JSON+HMAC)")
+    parser.add_argument("--diff",          type=str, default=None, help="Compara este SS com um .tsr anterior")
     parser.add_argument("--no-parallel",   action="store_true", help="Rodar sequencial (debug)")
     parser.add_argument("--threads",       type=int, default=4, help="Threads em paralelo (default 4)")
     parser.add_argument("--json",          action="store_true", help="Também salvar relatório JSON")
@@ -417,6 +427,14 @@ def main():
                   f"({len(fp_stats['dev_evidence'])} indicadores). "
                   f"Cheat Engine/IDA/etc serão LOW.{RESET}")
 
+    # PE analysis dos executáveis encontrados
+    if not args.no_pe:
+        print(f"{CYAN}[PE]{RESET} Analisando PE headers + hashes dos executáveis...", end=" ", flush=True)
+        before_pe = sum(len(f["items"]) for f in findings)
+        findings = pe_analysis.enrich_findings_with_pe(findings)
+        enriched = sum(1 for f in findings for i in f["items"] if i.get("pe_info"))
+        print(f"{GREEN}{enriched} executável(is) analisado(s){RESET}")
+
     # Cross-correlation: keywords que apareceram em 3+ fontes
     high_confidence = cross_correlate(findings)
     if high_confidence:
@@ -442,6 +460,23 @@ def main():
     if args.json:
         json_path = save_json(findings, sys_info)
         print(f"{GREEN}✓ Relatório JSON:{RESET} {json_path}")
+
+    # Salva .tsr (formato comparável + assinado HMAC)
+    tsr_path = None
+    if args.save_tsr:
+        tsr_path = diff_tool.save_tsr(findings, sys_info, args.save_tsr)
+        print(f"{GREEN}✓ Relatório .tsr:{RESET} {tsr_path}  {GREY}(assinado HMAC){RESET}")
+
+    # Diff contra .tsr anterior
+    if args.diff:
+        old_payload, err = diff_tool.load_tsr(args.diff)
+        if err:
+            print(f"{RED}Erro ao carregar diff: {err}{RESET}")
+        else:
+            new_payload = {"timestamp": datetime.now().isoformat(),
+                           "system": sys_info, "findings": findings}
+            diff = diff_tool.diff_reports(old_payload, new_payload)
+            print(diff_tool.format_diff_console(diff))
 
     # 4. Abrir browser
     if not args.no_open:

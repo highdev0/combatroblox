@@ -9,6 +9,12 @@ import base64
 import tempfile
 from datetime import datetime
 
+try:
+    import report_signing
+    HAS_SIGNING = True
+except ImportError:
+    HAS_SIGNING = False
+
 
 SEVERITY_COLORS = {
     "high":   "#ff4d4f",
@@ -291,6 +297,110 @@ def _render_screenshots(screenshots: dict) -> str:
     """
 
 
+def _render_timeline(findings: list) -> str:
+    """Plota todos os hits com timestamp num gráfico horizontal."""
+    items = []
+    for f in findings:
+        for item in f.get("items", []):
+            ts_str = item.get("timestamp", "")
+            if not ts_str:
+                continue
+            try:
+                ts = datetime.strptime(ts_str, "%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                continue
+            items.append((ts, item, f["name"]))
+
+    if not items:
+        return ""
+
+    items.sort(key=lambda x: x[0])
+    min_ts = items[0][0]
+    max_ts = items[-1][0]
+    span = (max_ts - min_ts).total_seconds() or 1
+
+    dots = []
+    for ts, item, source in items:
+        pos = (ts - min_ts).total_seconds() / span * 100
+        sev = item.get("severity", "low")
+        color = SEVERITY_COLORS.get(sev, "#888")
+        tip = f"{ts.strftime('%Y-%m-%d %H:%M')} · {source}\n{item.get('label', '')}\nmatch: {item.get('matched', '')}"
+        dots.append(f'<div class="tl-dot row-{sev}" style="left:{pos:.2f}%; background:{color}" title="{_escape(tip)}"></div>')
+
+    duration = max_ts - min_ts
+    duration_str = (
+        f"{duration.days}d" if duration.days >= 1
+        else f"{duration.seconds // 3600}h {(duration.seconds % 3600) // 60}m"
+        if duration.seconds >= 3600
+        else f"{duration.seconds // 60}m"
+    )
+
+    return f"""
+    <section class="card timeline">
+        <h2>🕐 Timeline de Atividade ({len(items)} hits)</h2>
+        <p class="desc">Cada ponto = 1 hit. Cluster denso = burst suspeito (ex: baixou cheat,
+        rodou, deletou tudo em 5 min).</p>
+        <div class="tl-range">
+            <span>{min_ts.strftime('%Y-%m-%d %H:%M')}</span>
+            <span style="color:#888">← {duration_str} →</span>
+            <span>{max_ts.strftime('%Y-%m-%d %H:%M')}</span>
+        </div>
+        <div class="tl-track">{''.join(dots)}</div>
+    </section>
+    """
+
+
+def _render_pe_section(findings: list) -> str:
+    """Section dedicada a PE analysis dos executáveis encontrados."""
+    pe_items = []
+    for f in findings:
+        for item in f.get("items", []):
+            if item.get("pe_info"):
+                pe_items.append((f["name"], item))
+
+    if not pe_items:
+        return ""
+
+    rows = []
+    for source, item in pe_items:
+        info = item["pe_info"]
+        pe = info.get("pe", {})
+        sha = info.get("sha256") or ""
+        hash_match = info.get("hash_match")
+        packed = pe.get("is_packed")
+        packer = pe.get("packer_name")
+        compile_ts = pe.get("compile_timestamp", "—")
+        machine = pe.get("machine", "?")
+        sections = ", ".join(pe.get("sections", [])[:8])
+
+        flags = []
+        if hash_match:
+            flags.append(f'<span class="pe-flag pe-flag-high">HASH MATCH: {_escape(hash_match)}</span>')
+        if packed:
+            flags.append(f'<span class="pe-flag pe-flag-high">PACKED ({_escape(packer or "?")})</span>')
+
+        rows.append(f"""
+        <tr>
+            <td><code>{_escape(os.path.basename(info.get('path', '')))}</code></td>
+            <td><code style="font-size:10px">{_escape(sha[:32] + '...' if sha else '?')}</code></td>
+            <td>{_escape(compile_ts)}</td>
+            <td>{_escape(machine)}</td>
+            <td><code style="font-size:11px">{_escape(sections)}</code></td>
+            <td>{''.join(flags) or '<span style="color:#888">—</span>'}</td>
+        </tr>""")
+
+    return f"""
+    <section class="card pe-analysis">
+        <h2>🔬 PE Analysis ({len(pe_items)} executáveis)</h2>
+        <p class="desc">SHA256 + PE header dos .exe/.dll suspeitos. Packed/compile date recente = red flag.</p>
+        <table>
+            <thead><tr><th>Arquivo</th><th>SHA256</th><th>Compilado</th><th>Arch</th><th>Sections</th><th>Flags</th></tr></thead>
+            <tbody>{''.join(rows)}</tbody>
+        </table>
+    </section>
+    """
+
+
 def _render_high_confidence(high_confidence: dict) -> str:
     """Section destacada com keywords que aparecem em 3+ fontes."""
     if not high_confidence:
@@ -443,8 +553,17 @@ def generate_html_report(findings: list[dict], sys_info: dict,
     sys_html = _render_system(sys_info)
     screens_html = _render_screenshots(screenshots or {})
     hc_html = _render_high_confidence(high_confidence or {})
+    timeline_html = _render_timeline(findings)
+    pe_html = _render_pe_section(findings)
     controls_html = _render_controls()
     sections = "\n".join(_render_section(f) for f in findings)
+
+    # Banner com hash do exe
+    exe_hash = ""
+    if HAS_SIGNING:
+        h = report_signing.get_self_hash()
+        if h:
+            exe_hash = f'<div class="exe-hash">SHA256 do telador: <code>{h}</code></div>'
 
     extra_css = """
     .screenshots .shots { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 12px; }
@@ -511,6 +630,39 @@ def generate_html_report(findings: list[dict], sys_info: dict,
         background: #0a0a0c; padding: 10px; border-radius: 6px;
         margin-top: 8px; font-size: 12px;
     }
+    .timeline .tl-range {
+        display: flex; justify-content: space-between;
+        color: #aaa; font-size: 12px; margin: 8px 0 4px;
+    }
+    .timeline .tl-track {
+        position: relative; height: 48px;
+        background: linear-gradient(90deg, #1a1a1d, #2a2a2e, #1a1a1d);
+        border-radius: 24px; margin: 6px 0 12px;
+        border: 1px solid #2a2a2e;
+    }
+    .timeline .tl-dot {
+        position: absolute; top: 50%; transform: translate(-50%, -50%);
+        width: 12px; height: 12px; border-radius: 50%;
+        cursor: help; box-shadow: 0 0 8px currentColor;
+        transition: transform .15s, box-shadow .15s;
+    }
+    .timeline .tl-dot:hover {
+        transform: translate(-50%, -50%) scale(2);
+        z-index: 10;
+        box-shadow: 0 0 16px currentColor;
+    }
+    .pe-analysis { border-left: 4px solid #ffb020; }
+    .pe-flag {
+        display: inline-block; padding: 2px 8px; border-radius: 3px;
+        font-size: 10px; font-weight: 700; margin-right: 4px;
+    }
+    .pe-flag-high { background: #ff4d4f; color: #000; }
+    .exe-hash {
+        text-align: center; color: #666; font-size: 11px;
+        margin-top: 24px; padding: 12px; background: #0a0a0c;
+        border-radius: 6px;
+    }
+    .exe-hash code { color: #888; word-break: break-all; }
     """
 
     html_doc = f"""<!DOCTYPE html>
@@ -528,10 +680,13 @@ def generate_html_report(findings: list[dict], sys_info: dict,
     {summary_html}
     {hc_html}
     {fp_html}
+    {timeline_html}
+    {pe_html}
     {sys_html}
     {screens_html}
     {controls_html}
     {sections}
+    {exe_hash}
     <footer>
         Resultado é heurístico (baseado em nomes/locais conhecidos).
         Pode haver falso positivo (ex.: alguém pesquisou sobre o tema) ou falso negativo (cheat com nome trocado).
