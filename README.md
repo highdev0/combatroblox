@@ -23,7 +23,8 @@ Você é responsável por cumprir as leis locais e políticas da sua organizaç�
 - Varredura local de sinais de execução/processos suspeitos
 - Correlação entre múltiplas fontes de evidência
 - Relatório HTML e JSON
-- Opcional: envio de relatório para webhook do Discord
+- Redação automática de credenciais/tokens/emails no relatório
+- Screenshot privacy-aware (pula captura se houver password manager aberto)
 
 ## Requisitos
 
@@ -50,8 +51,9 @@ cd "C:\Users\SEU_USUARIO\Desktop\combat-roblox"
 python telador.py
 python telador.py --no-open
 python telador.py --json
-python telador.py --webhook URL_DO_WEBHOOK
 python telador.py --strict-scripts
+python telador.py --no-redact
+python telador.py --force-screenshot
 ```
 
 No modo padrão, o scanner de scripts analisa `.lua` e `.luau`.
@@ -72,7 +74,8 @@ Saída esperada: `dist/telador.exe`.
 ## Privacidade e Dados
 
 - A coleta acontece localmente.
-- Dados só saem da máquina se webhook for configurado.
+- Por padrão, dados sensíveis em findings são mascarados (`[REDACTED]`).
+- Se houver gerenciador de senha aberto, screenshot é pulado por padrão.
 - Revise o código antes do uso em produção.
 
 ## Segurança

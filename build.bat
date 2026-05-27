@@ -68,6 +68,7 @@ python -m PyInstaller ^
     --hidden-import pe_analysis ^
     --hidden-import report_signing ^
     --hidden-import diff_tool ^
+    --hidden-import redaction ^
     --hidden-import hashlib ^
     --hidden-import hmac ^
     --collect-submodules psutil ^

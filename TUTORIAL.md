@@ -24,6 +24,9 @@ Pronto. O launcher faz sozinho:
 1. `VEREDITO: LIMPO` = nao encontrou vestigio.
 2. `SUSPEITO` ou `CHEATER` = abrir o HTML e revisar item por item.
 
+Nota: se um gerenciador de senhas estiver aberto (KeePass, Bitwarden, etc),
+o programa pula screenshot para preservar privacidade.
+
 ## 4. Quando der erro
 
 ### Python nao reconhecido
@@ -49,4 +52,6 @@ Se quiser rodar manual no terminal:
 python telador.py
 python telador.py --strict-scripts
 python telador.py --no-confirm --no-open --only scripts
+python telador.py --no-redact
+python telador.py --force-screenshot
 ```
