@@ -73,6 +73,143 @@ EXECUTOR_KEYWORDS = {
     "dll injector":     "medium",
     "roblox account manager": "low",
     "ram-master":       "low",
+
+    # ===== Executores 2024-2026 =====
+    # Xeno (open-source, muito popular)
+    "xeno":             "high",
+    "xeno.exe":         "high",
+    "xeno executor":    "high",
+    "xeno hub":         "high",
+    "xeno.now":         "high",
+    "xenoexec":         "high",
+    # Cryptic
+    "cryptic":          "high",
+    "cryptic exec":     "high",
+    "cryptic executor": "high",
+    "cryptic hub":      "high",
+    # Empyrean
+    "empyrean":         "high",
+    "empyrean exec":    "high",
+    # Valyse
+    "valyse":           "high",
+    "valyse executor":  "high",
+    # Bunni Hub
+    "bunni hub":        "high",
+    "bunni executor":   "high",
+    # Cosmic
+    "cosmic executor":  "high",
+    "cosmic exec":      "high",
+    "cosmic.exe":       "high",
+    # Acrylix
+    "acrylix":          "high",
+    "acrylix executor": "high",
+    # Marin
+    "marin executor":   "high",
+    "marin.exe":        "high",
+    "marin hub":        "high",
+    # Coral
+    "coral exploit":    "high",
+    "coral executor":   "high",
+    # Furk Os
+    "furk os":          "high",
+    "furkos":           "high",
+    "furk.cc":          "high",
+    # Sense
+    "sense executor":   "high",
+    "sense exec":       "high",
+    # Karambit X
+    "karambit x":       "high",
+    "karambit executor":"high",
+    # Drumix
+    "drumix":           "high",
+    "drumix executor":  "high",
+    # Omega X
+    "omega x":          "high",
+    "omegax":           "high",
+    # Apex Hardware
+    "apex hardware":    "high",
+    "apex hw":          "high",
+    # Stellar
+    "stellar spoof":    "high",
+    "stellar executor": "high",
+    # Sploitware
+    "sploitware":       "high",
+    # CCDownloader
+    "ccdownloader":     "high",
+    # Vega X (variante Vegax)
+    "vega x":           "high",
+    "vega executor":    "high",
+    # Cellura
+    "cellura":          "high",
+    "cellura exec":     "high",
+    # Hexus
+    "hexus executor":   "high",
+    "hexus exec":       "high",
+    # Verbose
+    "verbose executor": "high",
+    "verbose exec":     "high",
+    # Ninja Hub
+    "ninjahub":         "high",
+    "ninja hub":        "high",
+    # Outros menos comuns
+    "scriptware":       "high",  # já tinha mas reforça
+    "calamari executor":"high",  # já tinha
+    "valex":            "high",
+    "pylon executor":   "high",
+    "shellsploit":      "high",
+    "fenix exec":       "high",
+    "ronin exec":       "high",
+    "swift x":          "high",
+
+    # ===== HWID Spoofers (burlar ban Hyperion) =====
+    "hwid spoofer":     "high",
+    "hwid spoof":       "high",
+    "spoofer pro":      "high",
+    "hardware spoofer": "high",
+    "rage spoofer":     "high",
+    "tbh spoofer":      "high",
+    "tbhd spoofer":     "high",
+    "perm spoofer":     "high",
+    "permanent spoofer":"high",
+
+    # ===== Kernel-level / driver injection =====
+    "kdmapper":         "high",
+    "kdumapper":        "high",
+    "drvmap":           "high",
+    "ezmapper":         "high",
+    "manualmapper":     "high",
+    "dbk64.sys":        "high",   # Cheat Engine driver
+    "dbk32.sys":        "high",
+    "kduapi":           "high",
+    "intelmapper":      "high",
+    "msrexec":          "high",
+
+    # ===== Anti-cheat bypass =====
+    "byfron tools":     "high",
+    "hyperion tools":   "high",
+    "ac bypass":        "high",
+    "anticheat bypass": "high",
+    "byfron killer":    "high",
+    "vac bypass":       "high",
+
+    # ===== Hubs / scripts famosos =====
+    "owl hub":          "high",
+    "dark hub":         "high",
+    "infinite yield":   "high",
+    "hoho hub":         "high",
+    "epix hub":         "high",
+    "vape v4":          "high",
+    "vape lite":        "high",
+    "fates admin":      "high",
+    "fly hub":          "high",
+    "kraken hub":       "high",
+    "rip hub":          "high",
+    "rocky hub":        "high",
+    "fluxus hub":       "high",
+    "thresh hub":       "high",
+    "matrix hub":       "medium",
+    "yba hub":          "medium",
+    "evade hub":        "medium",
 }
 
 EXECUTOR_PROCESS_NAMES = {
@@ -106,6 +243,76 @@ EXECUTOR_PROCESS_NAMES = {
     "systeminformer.exe":     "medium",
     "extremeinjector.exe":    "medium",
     "xenosinjector.exe":      "medium",
+
+    # ===== Executores 2024-2026 =====
+    "xeno.exe":                   "high",
+    "xeno-bootstrapper.exe":      "high",
+    "xenobootstrapper.exe":       "high",
+    "xenolauncher.exe":           "high",
+    "cryptic.exe":                "high",
+    "cryptic-bootstrapper.exe":   "high",
+    "empyrean.exe":               "high",
+    "valyse.exe":                 "high",
+    "bunni.exe":                  "high",
+    "cosmic.exe":                 "high",
+    "acrylix.exe":                "high",
+    "marin.exe":                  "high",
+    "coral.exe":                  "high",
+    "furk.exe":                   "high",
+    "furkos.exe":                 "high",
+    "sense.exe":                  "high",
+    "karambit.exe":               "high",
+    "drumix.exe":                 "high",
+    "omega.exe":                  "high",
+    "omegax.exe":                 "high",
+    "apex.exe":                   "high",
+    "stellar.exe":                "high",
+    "sploitware.exe":             "high",
+    "ccdownloader.exe":           "high",
+    "cellura.exe":                "high",
+    "hexus.exe":                  "high",
+    "verbose.exe":                "high",
+    "ninja.exe":                  "high",
+    "valex.exe":                  "high",
+    "pylon.exe":                  "high",
+    "fenix.exe":                  "high",
+    "ronin.exe":                  "high",
+    # Bootstrappers genéricos
+    "exec-bootstrapper.exe":      "medium",
+    "robloxexec.exe":             "high",
+    "rbxexec.exe":                "high",
+
+    # ===== HWID Spoofers (processos) =====
+    "spoofer.exe":            "high",
+    "hwidspoofer.exe":        "high",
+    "ragespoofer.exe":        "high",
+    "permspoofer.exe":        "high",
+    "perm_spoofer.exe":       "high",
+
+    # ===== Kernel mappers (drivers de injeção) =====
+    "kdmapper.exe":           "high",
+    "drvmap.exe":             "high",
+    "ezmapper.exe":           "high",
+    "intelmapper.exe":        "high",
+    "manualmapper.exe":       "high",
+
+    # ===== Anti-cheat bypass =====
+    "byfrontools.exe":        "high",
+    "hyperiontools.exe":      "high",
+    "acbypass.exe":           "high",
+
+    # ===== Outros utilitários de cheating =====
+    "scylla.exe":             "medium",   # PE dumper
+    "x32dbg.exe":             "medium",   # Debugger (preto se Roblox aberto)
+    "x64dbg.exe":             "medium",
+    "ollydbg.exe":            "medium",
+    "ida.exe":                "medium",
+    "ida64.exe":              "medium",
+    "ghidra.exe":             "medium",
+    "dnspy.exe":              "medium",
+    "windbg.exe":             "medium",
+    "pe-bear.exe":            "medium",
+    "die.exe":                "medium",
 }
 
 SUSPICIOUS_DOMAINS = {
@@ -140,6 +347,89 @@ SUSPICIOUS_DOMAINS = {
     "rscripts.net":         "low",
     "scriptblox.com":       "low",
     "robloxscripts.com":    "low",
+
+    # ===== Executores 2024-2026 (domínios) =====
+    "xeno.now":             "high",
+    "xeno.lat":             "high",
+    "xeno.gg":              "high",
+    "xenoexec.com":         "high",
+    "crypticexec.com":      "high",
+    "cryptic.gg":           "high",
+    "cryptic-exec.com":     "high",
+    "empyrean.gg":          "high",
+    "empyreanexec.com":     "high",
+    "valyse.cc":            "high",
+    "valyse.gg":            "high",
+    "bunnihub.com":         "high",
+    "bunni.cc":             "high",
+    "cosmicexec.com":       "high",
+    "cosmic.gg":            "high",
+    "acrylix.gg":           "high",
+    "acrylix.cc":           "high",
+    "marinexecutor.cc":     "high",
+    "marin-executor.com":   "high",
+    "coralexploit.com":     "high",
+    "coral.gg":             "high",
+    "furkos.cc":            "high",
+    "furkos.com":           "high",
+    "furk.cc":              "high",
+    "ccdownloader.com":     "high",
+    "omegax.gg":            "high",
+    "omegax.cc":            "high",
+    "drumix.cc":            "high",
+    "drumix.gg":            "high",
+    "karambitx.cc":         "high",
+    "karambit-x.com":       "high",
+    "sense-exec.com":       "high",
+    "sense.gg":             "high",
+    "apexhw.cc":            "high",
+    "apex-hardware.com":    "high",
+    "stellarspoof.com":     "high",
+    "sploitware.com":       "high",
+    "cellura.cc":           "high",
+    "hexusexec.com":        "high",
+    "verbose-exec.com":     "high",
+    "ninjahub.cc":          "high",
+    "ninjahub.gg":          "high",
+    "valex.gg":             "high",
+    "pylonexec.com":        "high",
+    "fenixexec.com":        "high",
+
+    # Hubs / repositórios de cheats
+    "v3rmillion.com":       "medium",   # variantes
+    "v3rm.net":             "medium",
+    "robloxscripts.gg":     "low",
+    "fluxusscripts.com":    "high",
+    "waveexec.gg":          "high",
+    "waveexecutor.com":     "high",
+    "solaraexec.com":       "high",
+    "solara-executor.com":  "high",
+    "krnl.gg":              "high",
+    "krnl.lol":             "high",
+    "krnl.lat":             "high",
+    "hydrogen.gg":          "high",
+    "hydrogen.cc":          "high",
+    "deltaexploits.gg":     "high",     # já tinha mas reforço
+    "evon.cc":              "high",
+    "evonexploit.com":      "high",
+    "trigonevo.gg":         "high",
+    "argonexec.com":        "high",     # já tinha
+    "swiftexec.gg":         "high",
+    "swift-exec.com":       "high",
+
+    # HWID Spoofer sites
+    "ragespoof.com":        "high",
+    "permspoof.com":        "high",
+    "tbhd.cc":              "high",
+    "spoofer.gg":           "high",
+    "hwid-spoofer.com":     "high",
+
+    # Marketplaces / forums grayhat
+    "elitepvpers.com":      "medium",
+    "unknowncheats.me":     "medium",
+    "guidedhacking.com":    "medium",
+    "lanik.us":             "medium",
+    "mpgh.net":             "medium",
 }
 
 SUSPICIOUS_FOLDER_NAMES = {
@@ -162,6 +452,75 @@ SUSPICIOUS_FOLDER_NAMES = {
     "robloxscripts":        "medium",
     "roblox scripts":       "medium",
     "exploits":             "low",
+
+    # ===== Executores 2024-2026 (folder names) =====
+    "xeno":                 "high",
+    "xeno executor":        "high",
+    "cryptic":              "high",
+    "cryptic exec":         "high",
+    "empyrean":             "high",
+    "valyse":               "high",
+    "bunni hub":            "high",
+    "cosmic":               "high",
+    "cosmic exec":          "high",
+    "acrylix":              "high",
+    "marin":                "high",
+    "marin exec":           "high",
+    "coral":                "medium",
+    "coral exec":           "high",
+    "furk os":              "high",
+    "furkos":               "high",
+    "sense":                "medium",
+    "sense exec":           "high",
+    "karambit x":           "high",
+    "drumix":               "high",
+    "omega x":              "high",
+    "omegax":               "high",
+    "apex hardware":        "high",
+    "stellar":              "medium",
+    "stellar spoof":        "high",
+    "sploitware":           "high",
+    "ccdownloader":         "high",
+    "cellura":              "high",
+    "hexus":                "high",
+    "verbose exec":         "high",
+    "ninjahub":             "high",
+    "ninja hub":            "high",
+    "valex":                "high",
+    "pylon exec":           "high",
+    "fenix exec":           "high",
+    "ronin exec":           "high",
+
+    # HWID Spoofers
+    "spoofer":              "high",
+    "hwid spoofer":         "high",
+    "rage spoofer":         "high",
+    "perm spoofer":         "high",
+    "tbhd spoofer":         "high",
+    "spoofer pro":          "high",
+
+    # Kernel mappers
+    "kdmapper":             "high",
+    "drvmap":               "high",
+    "ezmapper":             "high",
+
+    # Pastas de scripts famosas
+    "owl hub":              "high",
+    "dark hub":             "high",
+    "infinite yield":       "high",
+    "hoho hub":             "high",
+    "epix hub":             "high",
+    "fates admin":          "high",
+    "vape v4":              "high",
+    "scripts hub":          "medium",
+    "executors":            "high",
+    "rbxscripts":           "high",
+    "roblox exploits":      "high",
+    "roblox cheats":        "high",
+    "roblox hack":          "high",
+    "byfron bypass":        "high",
+    "hyperion bypass":      "high",
+    "anticheat bypass":     "high",
 }
 
 PATHS_TO_SCAN_FOR_EXECUTORS = [
@@ -302,6 +661,88 @@ SCRIPT_RED_FLAGS = {
     "getrenv":              "medium",
     "fireserver":           "low",
     "writefile(":           "low",
+
+    # ===== Mais funções de executor 2024+ =====
+    "newcclosure":          "high",
+    "checkcaller":          "high",
+    "iscclosure":           "high",
+    "islclosure":           "high",
+    "isexecutorclosure":    "high",
+    "is_synapse_function":  "high",
+    "syn_request":          "high",
+    "getnamecallmethod":    "high",
+    "setnamecallmethod":    "high",
+    "firetouchinterest":    "high",
+    "fireclickdetector":    "high",
+    "fireproximityprompt":  "high",
+    "decompile(":           "high",
+    "getscripts(":          "high",
+    "getloadedmodules":     "high",
+    "getmodules":           "high",
+    "getinstances":         "high",
+    "getnilinstances":      "high",
+    "getgc()":              "high",
+    "getreg()":             "high",
+    "saveinstance":         "high",
+    "appendfile(":          "medium",
+    "readfile(":            "medium",
+    "loadfile(":            "medium",
+    "isfile(":              "low",
+    "listfiles(":           "medium",
+    "makefolder(":          "low",
+    "delfile(":             "medium",
+
+    # ===== Hubs / scripts populares =====
+    "xeno hub":             "high",
+    "cryptic hub":          "high",
+    "marin hub":            "high",
+    "hoho hub":             "high",
+    "epix hub":             "high",
+    "vape v4":              "high",
+    "vape lite":            "high",
+    "fates admin":          "high",
+    "fly hub":              "high",
+    "kraken hub":           "high",
+    "rip hub":              "high",
+    "rocky hub":            "high",
+    "fluxus hub":           "high",
+    "thresh hub":           "high",
+    "matrix hub":           "medium",
+    "yba hub":              "medium",
+    "evade hub":            "medium",
+    "shadovis":             "medium",
+    "blox fruits hub":      "high",
+    "pet sim hub":          "high",
+    "arsenal hub":          "high",
+    "phantom forces hub":   "high",
+    "doors hub":            "high",
+    "criminality hub":      "high",
+    "da hood hub":          "high",
+
+    # ===== Funções de bypass/anticheat =====
+    "byfron":               "high",
+    "hyperion":             "high",
+    "antitamper":           "high",
+    "anticheat":            "medium",
+    "spoof hwid":           "high",
+    "byfron bypass":        "high",
+
+    # ===== Padrões comuns em scripts maliciosos =====
+    "_g.aimbot":            "high",
+    "_g.esp":               "high",
+    "_g.noclip":            "high",
+    "_g.fly":               "high",
+    "_g.speed":             "high",
+    "shared.aimbot":        "high",
+    "auto farm":            "medium",
+    "autofarm":             "medium",
+    "auto kill":            "medium",
+    "auto rob":             "medium",
+    "kill all":             "high",
+    "killall":              "high",
+    "teleport to player":   "medium",
+    "tptoplayer":           "medium",
+    "btools":               "medium",
 }
 
 # ----------------------------- Cleaners / Anti-forensics -----------------------------

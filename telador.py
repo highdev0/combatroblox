@@ -3,7 +3,7 @@ Telador BR - Roblox SS Tool
 
 Roda uma bateria de checagens locais (read-only) procurando por traços de
 executores Roblox e ferramentas auxiliares de cheating. Gera um relatório
-HTML que abre no browser. Opcionalmente envia tudo pro Discord via webhook.
+HTML que abre no browser. Tudo fica LOCAL — nada sai do PC.
 
 USO:
     python telador.py                     # roda normal (com screenshot + tudo)
@@ -11,13 +11,11 @@ USO:
     python telador.py --no-screenshot     # pula captura de tela
     python telador.py --no-forensics      # pula Amcache/BAM/JumpLists (são pesadas)
     python telador.py --no-antievasion    # pula VM/Sandbox/Clock checks
-    python telador.py --webhook URL       # envia relatório pro Discord
+    python telador.py --no-persistence    # pula Startup/Run/Tasks/WER
+    python telador.py --no-parallel       # roda sequencial (debug)
+    python telador.py --threads N         # ajusta threads paralelas (default 4)
     python telador.py --json              # também salva um .json bruto
-
-Webhook do Discord — 3 formas (em ordem de prioridade):
-    1. flag --webhook URL
-    2. variável de ambiente DISCORD_WEBHOOK_URL
-    3. arquivo webhook.txt ao lado do .exe (1ª linha = URL)
+    python telador.py --only X,Y          # roda só checagens específicas
 """
 
 import os
@@ -37,7 +35,6 @@ import forensics
 import antievasion
 import persistence
 import capture
-import webhook
 import report
 
 
@@ -81,7 +78,7 @@ BANNER = r"""
 
 def print_banner():
     print(f"{RED}{BANNER}{RESET}")
-    print(f"{GREY}  Versão 3.0  ·  25 scanners  ·  Paralelo  ·  Cross-correlation{RESET}\n")
+    print(f"{GREY}  Versão 3.1  ·  25 scanners  ·  542 signatures  ·  Paralelo  ·  100% local{RESET}\n")
 
 
 def is_admin() -> bool:
@@ -101,7 +98,7 @@ def confirm_consent() -> bool:
     print(f"  {GREY}- Scripts .lua / .luau salvos em pastas comuns{RESET}")
     print(f"  {GREY}- Indicadores de VM/Sandbox/relógio mexido{RESET}")
     print(f"  {GREY}- Capturas de tela (desktop + janela do Roblox){RESET}\n")
-    print(f"{GREY}Tudo é local. Só é enviado pra fora se um webhook estiver configurado.{RESET}\n")
+    print(f"{GREY}Tudo é local. Nada é enviado pra internet.{RESET}\n")
 
     resp = input(f"{YELLOW}Iniciar a tela? [s/N]: {RESET}").strip().lower()
     return resp in ("s", "sim", "y", "yes")
@@ -319,40 +316,6 @@ def save_json(findings: list, sys_info: dict) -> str:
     return path
 
 
-def load_webhook_url(arg_url: str = None) -> str:
-    """
-    Resolve URL do webhook em 3 fontes (prioridade decrescente):
-      1. flag --webhook
-      2. env var DISCORD_WEBHOOK_URL
-      3. webhook.txt ao lado do executável
-    """
-    if arg_url:
-        return arg_url
-
-    env = os.environ.get("DISCORD_WEBHOOK_URL")
-    if env:
-        return env
-
-    # Pasta do executável (PyInstaller frozen vs script)
-    if getattr(sys, "frozen", False):
-        exe_dir = os.path.dirname(sys.executable)
-    else:
-        exe_dir = os.path.dirname(os.path.abspath(__file__))
-
-    txt = os.path.join(exe_dir, "webhook.txt")
-    if os.path.isfile(txt):
-        try:
-            with open(txt, "r", encoding="utf-8") as fh:
-                for line in fh:
-                    line = line.strip()
-                    if line.startswith("http"):
-                        return line
-        except OSError:
-            pass
-
-    return None
-
-
 def main():
     parser = argparse.ArgumentParser(description="Telador BR - SS para Roblox")
     parser.add_argument("--no-open",       action="store_true", help="Não abrir HTML no navegador")
@@ -364,7 +327,6 @@ def main():
     parser.add_argument("--no-parallel",   action="store_true", help="Rodar sequencial (debug)")
     parser.add_argument("--threads",       type=int, default=4, help="Threads em paralelo (default 4)")
     parser.add_argument("--json",          action="store_true", help="Também salvar relatório JSON")
-    parser.add_argument("--webhook",       type=str, default=None, help="URL do webhook do Discord")
     parser.add_argument("--strict-scripts",action="store_true",
                         help="Modo agressivo no scanner de scripts (.txt genérico também entra)")
     parser.add_argument("--only",          type=str, default=None,
@@ -382,12 +344,6 @@ def main():
         if not confirm_consent():
             print(f"\n{GREY}Cancelado pelo usuário.{RESET}")
             sys.exit(0)
-
-    # Resolve webhook ANTES de rodar pra avisar o user se foi pego
-    webhook_url = load_webhook_url(args.webhook)
-    if webhook_url:
-        masked = webhook_url[:50] + "..." if len(webhook_url) > 50 else webhook_url
-        print(f"{GREEN}● Webhook configurado:{RESET} {GREY}{masked}{RESET}")
 
     print(f"\n{BOLD}Iniciando varredura...{RESET}\n")
 
@@ -445,20 +401,7 @@ def main():
         json_path = save_json(findings, sys_info)
         print(f"{GREEN}✓ Relatório JSON:{RESET} {json_path}")
 
-    # 4. Webhook
-    if webhook_url:
-        print(f"{CYAN}↑{RESET} Enviando pro Discord...", end=" ", flush=True)
-        attachments = [html_path]
-        for shot in screenshots.values():
-            if shot:
-                attachments.append(shot)
-        ok, msg = webhook.send(webhook_url, findings, sys_info, attachments=attachments)
-        if ok:
-            print(f"{GREEN}{msg}{RESET}")
-        else:
-            print(f"{RED}{msg}{RESET}")
-
-    # 5. Abrir browser
+    # 4. Abrir browser
     if not args.no_open:
         try:
             webbrowser.open(f"file:///{html_path}")
