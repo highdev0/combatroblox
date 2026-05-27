@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.2.1] - 2026-05-27
+
+Security/privacy patch — protege dados sensíveis no relatório.
+
+### Added
+
+#### 🛡️ Redação automática (`redaction.py`)
+- Procura padrões de credenciais/tokens/emails em todos os campos
+  do relatório e substitui por `[REDACTED]`:
+  - Bearer/Basic tokens
+  - `password=`, `token=`, `apikey=`, `secret=` inline
+  - OpenAI (`sk-`), Anthropic (`sk-ant-`), GitHub (`gh[opsu]_`),
+    Slack (`xox*-`), Google (`AIza*`), AWS (`AKIA*`), Discord
+  - Emails (mantém domínio)
+  - Hex strings de 40+ chars (hashes/tokens)
+  - URLs com `user:pass@host`
+  - CPF e cartão de crédito
+
+#### 🔒 Screenshot privacy-aware
+- Antes de capturar tela, telador detecta se há gerenciador de senha
+  rodando (KeePass, 1Password, Bitwarden, LastPass, Dashlane, Authy,
+  Enpass, NordPass, etc.) e **pula screenshot** com aviso.
+- `--force-screenshot` override pra forçar captura mesmo assim.
+
+### Added — CLI
+- `--no-redact` — desliga redação (debug).
+- `--force-screenshot` — força captura mesmo com password manager aberto.
+
 ## [3.2.0] - 2026-05-27
 
 The "10/10" release. Visual timeline, PE analysis with hash matching,

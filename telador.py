@@ -42,6 +42,7 @@ import fp_filter
 import pe_analysis
 import report_signing
 import diff_tool
+import redaction
 import report
 
 
@@ -85,7 +86,7 @@ BANNER = r"""
 
 def print_banner():
     print(f"{RED}{BANNER}{RESET}")
-    print(f"{GREY}  Versão 3.2  ·  34 scanners  ·  PE analysis  ·  Timeline  ·  Diff entre SS  ·  HMAC{RESET}\n")
+    print(f"{GREY}  Versão 3.2.1  ·  34 scanners  ·  Redação de creds  ·  Privacy-aware screenshot{RESET}\n")
     self_hash = report_signing.get_self_hash()
     if self_hash:
         print(f"{GREY}  SHA256 deste exe: {self_hash[:16]}...{self_hash[-16:]}{RESET}")
@@ -352,6 +353,8 @@ def main():
     parser.add_argument("--no-pe",         action="store_true", help="Pula PE analysis dos executáveis")
     parser.add_argument("--save-tsr",      type=str, default=None, help="Salva relatório em .tsr (JSON+HMAC)")
     parser.add_argument("--diff",          type=str, default=None, help="Compara este SS com um .tsr anterior")
+    parser.add_argument("--no-redact",     action="store_true", help="Desliga redação de credenciais/emails/tokens no relatório")
+    parser.add_argument("--force-screenshot", action="store_true", help="Captura tela mesmo se gerenciador de senhas estiver aberto")
     parser.add_argument("--no-parallel",   action="store_true", help="Rodar sequencial (debug)")
     parser.add_argument("--threads",       type=int, default=4, help="Threads em paralelo (default 4)")
     parser.add_argument("--json",          action="store_true", help="Também salvar relatório JSON")
@@ -378,15 +381,22 @@ def main():
     # 1. Screenshot (antes das checagens, no estado "fresh")
     screenshots = {}
     if not args.no_screenshot:
-        print(f"{CYAN}[SS]{RESET} Capturando TODOS os monitores + janela do Roblox...", end=" ", flush=True)
-        try:
-            screenshots = capture.capture_all()
-            took = sum(1 for v in screenshots.values() if v)
-            total = len(screenshots)
-            print(f"{GREEN}{took}/{total} ok{RESET}")
-        except Exception as e:
-            print(f"{YELLOW}falhou: {e}{RESET}")
-            screenshots = {}
+        sensitive = redaction.detect_sensitive_processes()
+        if sensitive and not args.force_screenshot:
+            print(f"{YELLOW}[SS]{RESET} Gerenciador de senhas aberto "
+                  f"({GREY}{', '.join(sensitive)}{RESET}{YELLOW}). "
+                  f"Capture pulado pra preservar privacidade.{RESET}")
+            print(f"      {GREY}Feche o programa e rode de novo, ou use --force-screenshot.{RESET}")
+        else:
+            print(f"{CYAN}[SS]{RESET} Capturando TODOS os monitores + janela do Roblox...", end=" ", flush=True)
+            try:
+                screenshots = capture.capture_all()
+                took = sum(1 for v in screenshots.values() if v)
+                total = len(screenshots)
+                print(f"{GREEN}{took}/{total} ok{RESET}")
+            except Exception as e:
+                print(f"{YELLOW}falhou: {e}{RESET}")
+                screenshots = {}
 
     # 2. Checagens
     only_list = None
@@ -426,6 +436,13 @@ def main():
             print(f"      {GREY}● Ambiente de dev detectado "
                   f"({len(fp_stats['dev_evidence'])} indicadores). "
                   f"Cheat Engine/IDA/etc serão LOW.{RESET}")
+
+    # Redação de credenciais/tokens/emails antes de gerar relatório
+    if not args.no_redact:
+        findings, redacted_count = redaction.redact_findings(findings)
+        if redacted_count:
+            print(f"{CYAN}[RD]{RESET} Redação aplicada: "
+                  f"{GREY}{redacted_count} campo(s) com credenciais/tokens/emails mascarados{RESET}")
 
     # PE analysis dos executáveis encontrados
     if not args.no_pe:
