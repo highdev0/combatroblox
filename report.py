@@ -38,12 +38,36 @@ def _render_section(finding: dict) -> str:
     for item in finding.get("items", []):
         sev = item.get("severity", "low")
         color = SEVERITY_COLORS.get(sev, "#888")
+        conf = item.get("confidence")
+        fp_reason = item.get("fp_reason")
+        orig_sev = item.get("original_severity")
+
+        # Badge de rebaixamento
+        downgrade_badge = ""
+        if orig_sev and orig_sev != sev:
+            downgrade_badge = (f'<span class="fp-badge" title="{_escape(fp_reason or "")}">'
+                                f'↓ era {_escape(orig_sev.upper())}</span>')
+
+        # Confidence bar
+        conf_html = ""
+        if conf is not None:
+            conf_color = "#3fbf7f" if conf >= 70 else ("#ffb020" if conf >= 40 else "#888")
+            conf_html = (f'<div class="conf-bar"><div class="conf-fill" '
+                          f'style="width:{conf}%; background:{conf_color}"></div>'
+                          f'<span class="conf-val">{conf}</span></div>')
+
+        # Detail com fp_reason inline (se houver)
+        detail_text = item.get('detail', '')
+        if fp_reason:
+            detail_text = f"{detail_text}\n[FP-filter: {fp_reason}]"
+
         rows.append(f"""
         <tr class="row-{sev}">
-            <td class="sev"><span class="sev-dot" style="background:{color}"></span>{_escape(sev.upper())}</td>
+            <td class="sev"><span class="sev-dot" style="background:{color}"></span>{_escape(sev.upper())}{downgrade_badge}</td>
             <td class="label">{_escape(item.get('label', ''))}</td>
-            <td class="detail"><code>{_escape(item.get('detail', ''))}</code></td>
+            <td class="detail"><code>{_escape(detail_text)}</code></td>
             <td class="match"><code>{_escape(item.get('matched', ''))}</code></td>
+            <td class="conf">{conf_html}</td>
             <td class="ts">{_escape(item.get('timestamp', ''))}</td>
         </tr>""")
 
@@ -56,6 +80,7 @@ def _render_section(finding: dict) -> str:
                     <th>Item</th>
                     <th>Detalhe</th>
                     <th>Match</th>
+                    <th>Conf.</th>
                     <th>Quando</th>
                 </tr>
             </thead>
@@ -92,36 +117,68 @@ def _render_system(info: dict) -> str:
     """
 
 
-def _render_summary(findings: list[dict]) -> str:
+def _render_summary(findings: list[dict], verdict: dict = None) -> str:
     total = sum(len(f["items"]) for f in findings)
-    high = sum(1 for f in findings for i in f["items"] if i.get("severity") == "high")
-    med  = sum(1 for f in findings for i in f["items"] if i.get("severity") == "medium")
-    low  = sum(1 for f in findings for i in f["items"] if i.get("severity") == "low")
     errors = sum(1 for f in findings if f["status"] == "error")
 
-    veredito = "LIMPO"
-    veredito_color = "#3fbf7f"
-    if high > 0:
-        veredito = "CHEATER (HIGH MATCHES)"
-        veredito_color = "#ff4d4f"
-    elif med > 0:
-        veredito = "SUSPEITO (REVISAR)"
-        veredito_color = "#ffb020"
-    elif low > 0:
-        veredito = "POSSÍVEIS PISTAS"
-        veredito_color = "#ffe066"
+    if verdict is None:
+        # Fallback: usa contagem simples se não passou verdict
+        high = sum(1 for f in findings for i in f["items"] if i.get("severity") == "high")
+        med  = sum(1 for f in findings for i in f["items"] if i.get("severity") == "medium")
+        low  = sum(1 for f in findings for i in f["items"] if i.get("severity") == "low")
+        verdict = {
+            "verdict": "LIMPO" if not (high + med + low) else "REVISAR",
+            "color": "#3fbf7f",
+            "score": 0,
+            "high": high, "medium": med, "low": low,
+        }
+
+    score_html = f'<div class="stat"><div class="num" style="color:{verdict["color"]}">{verdict["score"]}</div><div>Score</div></div>'
+    recent = verdict.get("most_recent_hit") or "—"
 
     return f"""
     <section class="card overview">
         <h2>Resumo</h2>
-        <div class="big-verdict" style="color:{veredito_color}">{veredito}</div>
+        <div class="big-verdict" style="color:{verdict['color']}">{verdict['verdict']}</div>
+        <div class="verdict-sub">Hit mais recente: <code>{_escape(recent)}</code></div>
         <div class="stats">
-            <div class="stat"><div class="num" style="color:#ff4d4f">{high}</div><div>High</div></div>
-            <div class="stat"><div class="num" style="color:#ffb020">{med}</div><div>Medium</div></div>
-            <div class="stat"><div class="num" style="color:#ffe066">{low}</div><div>Low</div></div>
+            <div class="stat"><div class="num" style="color:#ff4d4f">{verdict['high']}</div><div>High</div></div>
+            <div class="stat"><div class="num" style="color:#ffb020">{verdict['medium']}</div><div>Medium</div></div>
+            <div class="stat"><div class="num" style="color:#ffe066">{verdict['low']}</div><div>Low</div></div>
+            {score_html}
             <div class="stat"><div class="num">{total}</div><div>Total</div></div>
             <div class="stat"><div class="num" style="color:#888">{errors}</div><div>Skips/Erros</div></div>
         </div>
+    </section>
+    """
+
+
+def _render_fp_stats(fp_stats: dict) -> str:
+    """Mostra info do filtro de falso-positivo se rodou."""
+    if not fp_stats:
+        return ""
+
+    dev_note = ""
+    if fp_stats.get("is_dev_env"):
+        ev_list = "<br>".join(f"<code>{_escape(p)}</code>" for p in fp_stats["dev_evidence"][:5])
+        dev_note = f"""
+        <p><strong style="color:#ffb020">⚠ Ambiente de dev detectado.</strong>
+        Ferramentas como Cheat Engine, IDA, dnSpy, etc. foram rebaixadas pra LOW
+        (uso legítimo provável). Indicadores:</p>
+        <div class="dev-evidence">{ev_list}</div>
+        """
+
+    return f"""
+    <section class="card fp-stats">
+        <h2>🛡️ Filtro de Falsos Positivos</h2>
+        <p class="desc">Pós-processamento removeu/rebaixou hits prováveis-FP. Use <code>--strict</code> pra desligar.</p>
+        <div class="stats">
+            <div class="stat"><div class="num">{fp_stats['total_items_in']}</div><div>Hits brutos</div></div>
+            <div class="stat"><div class="num" style="color:#3fbf7f">{fp_stats['items_whitelisted']}</div><div>Whitelistados</div></div>
+            <div class="stat"><div class="num" style="color:#ffb020">{fp_stats['items_downgraded']}</div><div>Rebaixados</div></div>
+            <div class="stat"><div class="num">{fp_stats['total_items_out']}</div><div>Finais</div></div>
+        </div>
+        {dev_note}
     </section>
     """
 
@@ -370,6 +427,8 @@ CONTROLS_JS = """
 def generate_html_report(findings: list[dict], sys_info: dict,
                           screenshots: dict = None,
                           high_confidence: dict = None,
+                          verdict: dict = None,
+                          fp_stats: dict = None,
                           output_path: str = None) -> str:
     """Gera HTML e retorna o caminho do arquivo salvo."""
     if output_path is None:
@@ -379,7 +438,8 @@ def generate_html_report(findings: list[dict], sys_info: dict,
             f"telador_relatorio_{ts_tag}.html",
         )
 
-    summary_html = _render_summary(findings)
+    summary_html = _render_summary(findings, verdict)
+    fp_html = _render_fp_stats(fp_stats or {})
     sys_html = _render_system(sys_info)
     screens_html = _render_screenshots(screenshots or {})
     hc_html = _render_high_confidence(high_confidence or {})
@@ -421,6 +481,36 @@ def generate_html_report(findings: list[dict], sys_info: dict,
     .filter-btn:hover { opacity: 0.85; }
     .filter-btn.off { opacity: 0.3; }
     .filter-btn.solid { background: #2a2a2e; color: #e8e8e8; }
+
+    .fp-badge {
+        display: inline-block; margin-left: 6px;
+        background: #ffb020; color: #000;
+        padding: 1px 6px; border-radius: 3px;
+        font-size: 9px; font-weight: 700;
+        cursor: help;
+    }
+    .conf-bar {
+        position: relative; width: 60px; height: 14px;
+        background: #0a0a0c; border-radius: 3px; overflow: hidden;
+    }
+    .conf-fill {
+        height: 100%; transition: width .3s;
+    }
+    .conf-val {
+        position: absolute; top: 0; left: 0; width: 100%;
+        text-align: center; font-size: 10px; line-height: 14px;
+        color: #fff; font-weight: 700;
+        text-shadow: 0 0 2px #000;
+    }
+    .verdict-sub {
+        text-align: center; color: #888; margin: -8px 0 16px;
+        font-size: 13px;
+    }
+    .fp-stats { border-left: 4px solid #3fbf7f; }
+    .dev-evidence {
+        background: #0a0a0c; padding: 10px; border-radius: 6px;
+        margin-top: 8px; font-size: 12px;
+    }
     """
 
     html_doc = f"""<!DOCTYPE html>
@@ -437,6 +527,7 @@ def generate_html_report(findings: list[dict], sys_info: dict,
     </header>
     {summary_html}
     {hc_html}
+    {fp_html}
     {sys_html}
     {screens_html}
     {controls_html}

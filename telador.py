@@ -38,6 +38,7 @@ import live_analysis
 import command_history
 import peripherals
 import capture
+import fp_filter
 import report
 
 
@@ -81,7 +82,7 @@ BANNER = r"""
 
 def print_banner():
     print(f"{RED}{BANNER}{RESET}")
-    print(f"{GREY}  Versão 3.0  ·  34 scanners  ·  DLL live scan  ·  PS history  ·  Multi-monitor  ·  Macros{RESET}\n")
+    print(f"{GREY}  Versão 3.1  ·  34 scanners  ·  FP-filter  ·  Score ponderado  ·  Dev-aware{RESET}\n")
 
 
 def is_admin() -> bool:
@@ -295,28 +296,29 @@ def run_scanners(chain: list, only: list = None) -> list:
 
 
 def print_overview(findings: list) -> None:
-    total = sum(len(f["items"]) for f in findings)
-    high = sum(1 for f in findings for i in f["items"] if i.get("severity") == "high")
-    med  = sum(1 for f in findings for i in f["items"] if i.get("severity") == "medium")
-    low  = sum(1 for f in findings for i in f["items"] if i.get("severity") == "low")
+    verdict = fp_filter.compute_verdict(findings)
 
     print(f"\n{BOLD}═══════════════════════════════════════════════════════════════{RESET}")
     print(f"{BOLD}                            RESUMO{RESET}")
     print(f"{BOLD}═══════════════════════════════════════════════════════════════{RESET}\n")
 
-    print(f"  {RED}HIGH  {RESET}  {high:>3}   (match direto de executor conhecido)")
-    print(f"  {YELLOW}MEDIUM{RESET}  {med:>3}   (ferramenta auxiliar ou bypass)")
-    print(f"  {MAGENTA}LOW   {RESET}  {low:>3}   (palavra-chave ambígua)")
-    print(f"  {GREY}TOTAL {RESET}  {total:>3}\n")
+    print(f"  {RED}HIGH  {RESET}  {verdict['high']:>3}   (match direto de executor conhecido)")
+    print(f"  {YELLOW}MEDIUM{RESET}  {verdict['medium']:>3}   (ferramenta auxiliar ou bypass)")
+    print(f"  {MAGENTA}LOW   {RESET}  {verdict['low']:>3}   (palavra-chave ambígua)")
+    print(f"  {GREY}Score:{RESET}  {verdict['score']:>5.1f}   (ponderado por severidade × confidence × recência)")
+    if verdict["most_recent_hit"]:
+        print(f"  {GREY}Mais recente: {verdict['most_recent_hit']}{RESET}")
+    print()
 
-    if high > 0:
-        print(f"{RED}{BOLD}>>> VEREDITO: CHEATER (HIGH MATCHES) <<<{RESET}\n")
-    elif med > 0:
-        print(f"{YELLOW}{BOLD}>>> VEREDITO: SUSPEITO (REVISAR) <<<{RESET}\n")
-    elif low > 0:
-        print(f"{MAGENTA}{BOLD}>>> VEREDITO: POSSÍVEIS PISTAS <<<{RESET}\n")
-    else:
-        print(f"{GREEN}{BOLD}>>> VEREDITO: LIMPO <<<{RESET}\n")
+    color_map = {
+        "CHEATER CONFIRMADO":   RED,
+        "ALTAMENTE SUSPEITO":   RED,
+        "SUSPEITO (REVISAR)":   YELLOW,
+        "POSSÍVEIS PISTAS":     MAGENTA,
+        "LIMPO":                GREEN,
+    }
+    color = color_map.get(verdict["verdict"], GREY)
+    print(f"{color}{BOLD}>>> VEREDITO: {verdict['verdict']} (score {verdict['score']}) <<<{RESET}\n")
 
 
 def save_json(findings: list, sys_info: dict) -> str:
@@ -339,6 +341,7 @@ def main():
     parser.add_argument("--no-live",       action="store_true", help="Pular DLL injection scan + process tree")
     parser.add_argument("--no-history",    action="store_true", help="Pular PowerShell/RunMRU/TypedPaths")
     parser.add_argument("--no-peripherals",action="store_true", help="Pular detecção de macros de mouse")
+    parser.add_argument("--strict",        action="store_true", help="Desliga filtro de falsos positivos (modo paranoia)")
     parser.add_argument("--no-parallel",   action="store_true", help="Rodar sequencial (debug)")
     parser.add_argument("--threads",       type=int, default=4, help="Threads em paralelo (default 4)")
     parser.add_argument("--json",          action="store_true", help="Também salvar relatório JSON")
@@ -401,6 +404,19 @@ def main():
     else:
         findings = run_scanners_parallel(chain, only=only_list, max_workers=args.threads)
 
+    # Filtro de falsos positivos (a menos que --strict)
+    fp_stats = None
+    if not args.strict:
+        findings, fp_stats = fp_filter.post_process_findings(findings)
+        print(f"\n{CYAN}[FP]{RESET} Filtro de falso-positivo: "
+              f"{GREY}{fp_stats['items_whitelisted']} whitelistados, "
+              f"{fp_stats['items_downgraded']} rebaixados "
+              f"({fp_stats['total_items_in']} → {fp_stats['total_items_out']}){RESET}")
+        if fp_stats['is_dev_env']:
+            print(f"      {GREY}● Ambiente de dev detectado "
+                  f"({len(fp_stats['dev_evidence'])} indicadores). "
+                  f"Cheat Engine/IDA/etc serão LOW.{RESET}")
+
     # Cross-correlation: keywords que apareceram em 3+ fontes
     high_confidence = cross_correlate(findings)
     if high_confidence:
@@ -414,9 +430,12 @@ def main():
     print_overview(findings)
 
     # 3. HTML report
+    verdict_obj = fp_filter.compute_verdict(findings)
     html_path = report.generate_html_report(findings, sys_info,
                                              screenshots=screenshots,
-                                             high_confidence=high_confidence)
+                                             high_confidence=high_confidence,
+                                             verdict=verdict_obj,
+                                             fp_stats=fp_stats)
     print(f"{GREEN}✓ Relatório HTML:{RESET} {html_path}")
 
     json_path = None

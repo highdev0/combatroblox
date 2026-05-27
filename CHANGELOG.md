@@ -2,6 +2,54 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.1.0] - 2026-05-27
+
+Quality release focused on **reducing false positives** — tool that
+flags everyone as cheater is useless for serious SS.
+
+### Added
+
+#### 🛡️ False-positive filter (`fp_filter.py`)
+- `detect_dev_environment` — checks for Visual Studio, JetBrains,
+  VS Code, Python/Node SDKs, Git, `source\repos` folder. If 2+ indicators
+  found, treats user as developer (Cheat Engine / IDA / dnSpy / x32dbg
+  get auto-downgraded to LOW — legitimate uses exist).
+- `is_whitelisted_path` — paths inside `.git`, `node_modules`, `.venv`,
+  `__pycache__`, `.vscode`, `.idea`, Steam library, Microsoft Visual
+  Studio, JetBrains, Windows system folders, NVIDIA/AMD/Intel drivers,
+  Windows Defender, Windows SDKs — all auto-removed.
+- `apply_time_decay` — hits older than 30 days get downgraded one
+  severity level. 90+ days = downgraded two levels.
+- `adjust_browser_finding` — visits to forum/research domains
+  (v3rmillion, unknowncheats, guidedhacking) only get HIGH severity
+  if there was an actual DOWNLOAD. Pure visit = MEDIUM at most.
+- `compute_confidence` — 0-100 numeric score per item considering
+  severity, age, FP downgrades, and freshness boost for recent hits.
+- `compute_verdict` — weighted final verdict using `severity × confidence`
+  summation. New verdict tiers:
+  - `CHEATER CONFIRMADO` (score ≥ 40)
+  - `ALTAMENTE SUSPEITO` (score ≥ 20)
+  - `SUSPEITO (REVISAR)` (score ≥ 8)
+  - `POSSÍVEIS PISTAS` (score ≥ 2)
+  - `LIMPO` (score < 2)
+
+#### 📊 New report fields
+- Items now carry `original_severity`, `fp_reason`, and `confidence`.
+- HTML report shows a `↓ era HIGH` badge with tooltip explaining why
+  the item was downgraded.
+- Confidence shown as a colored bar per item.
+- New "Filtro de Falsos Positivos" card in the report summarizing
+  whitelisted/downgraded counts and dev-env evidence.
+- Summary card now shows weighted score + most recent hit timestamp.
+
+### Changed
+- Verdict logic is now weighted (was: simple HIGH > 0 check).
+- Console output shows FP-filter stats inline before the summary.
+- Banner: `v3.1 · 34 scanners · FP-filter · Score ponderado · Dev-aware`.
+
+### Added — CLI
+- `--strict` flag — disables the entire FP-filter pass for paranoia mode.
+
 ## [3.0.0] - 2026-05-27
 
 Major release focused on detection depth — extra coverage layer for
