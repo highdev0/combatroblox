@@ -117,12 +117,22 @@ def scan_discord_cache() -> dict:
                 if not matched_kw:
                     continue
 
+                # Rebaixa severity: ver URL em cache ≠ baixar. Cara entra em
+                # servidor de cheats por curiosidade/moderação tem cache cheio.
+                # Só mantém HIGH se URL termina em .exe / .dll / .zip / .rar
+                # (download direto, não só visita de página).
+                is_download = any(url.endswith(ext) for ext in
+                                  (".exe", ".dll", ".zip", ".rar", ".7z", ".msi"))
+                if not is_download and severity == "high":
+                    severity = "medium"
+
                 ts = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")
                 # Trunca URL pra exibir
                 display = url if len(url) < 80 else url[:77] + "..."
+                detail_note = "" if is_download else "\n⚠ Apenas visita em cache — não confirma download."
                 items.append(_item(
                     label=display,
-                    detail=f"Cache: {os.path.basename(full)}\nURL completa: {url[:300]}",
+                    detail=f"Cache: {os.path.basename(full)}\nURL: {url[:300]}{detail_note}",
                     severity=severity, matched=matched_kw, timestamp=ts,
                 ))
 

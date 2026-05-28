@@ -105,6 +105,11 @@ def scan_network_connections() -> dict:
 
 DNS_RECORD_RE = re.compile(r"Record Name[.\s]+:\s+([^\s]+)", re.IGNORECASE)
 DNS_RECORD_RE_PT = re.compile(r"Nome do registro[.\s]+:\s+([^\s]+)", re.IGNORECASE)
+# Fallback genérico: linhas com 1+ pontos que parecem domínio
+DNS_FALLBACK_RE = re.compile(
+    r"\b([a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?){1,5}\.[a-z]{2,24})\b",
+    re.IGNORECASE,
+)
 
 
 def scan_dns_cache() -> dict:
@@ -123,12 +128,21 @@ def scan_dns_cache() -> dict:
                        error=(result.stderr or "ipconfig falhou")[:200])
 
     output = result.stdout
-    # Pega nomes de domínio em ambos formatos (PT/EN)
+    # Pega nomes de domínio: PT/EN primeiro (preciso), fallback se nenhum encontrado
     domains = set()
     for line in output.split("\n"):
         m = DNS_RECORD_RE.search(line) or DNS_RECORD_RE_PT.search(line)
         if m:
             domains.add(m.group(1).strip().rstrip(".").lower())
+
+    # Fallback: se PT/EN não pegou nada, busca padrão genérico (outros locales)
+    if not domains:
+        for line in output.split("\n"):
+            for m in DNS_FALLBACK_RE.finditer(line):
+                d = m.group(1).strip().rstrip(".").lower()
+                # Filtra lixo (IPs, números de linha, palavras curtas)
+                if "." in d and len(d) >= 6 and not d[0].isdigit():
+                    domains.add(d)
 
     items = []
     for domain in sorted(domains):
@@ -180,10 +194,14 @@ def scan_hosts_file() -> dict:
             if tele_dom in lower:
                 # Verifica se aponta pra 0.0.0.0 / 127.0.0.1 (bloqueio)
                 if any(blocker in lower for blocker in ("0.0.0.0", "127.0.0.1", "::1")):
+                    # MEDIUM (não HIGH) — pode ser bloqueio parental, escola,
+                    # empresa. Cheater fazer isso é possível mas pais
+                    # bloqueando filho de jogar Roblox é caso comum.
                     items.append(_item(
                         label=f"L{line_num}: bloqueia {tele_dom}",
-                        detail=stripped[:200],
-                        severity="high", matched=f"hosts-block:{tele_dom}",
+                        detail=f"{stripped[:200]}\n"
+                               f"⚠ Pode ser bloqueio parental/escola/empresa. Verifique contexto.",
+                        severity="medium", matched=f"hosts-block:{tele_dom}",
                     ))
                 break
 

@@ -132,25 +132,65 @@ def _get_volume_creation(drive="C:"):
 
 
 def _get_roblox_install():
-    """Pega data de criação da pasta do Roblox/Bloxstrap (proxy pra instalação)."""
-    candidates = [
+    """
+    Pega data de instalação do Roblox. Prioridade:
+    1. Registry InstallDate (mais confiável, não muda em reinstall)
+    2. Versions/ subfolder mais antigo (resistente a reinstall recente)
+    3. Pasta raiz creation time (fallback, pode ser enganoso se reinstalou)
+    """
+    # 1. Registry — Uninstall key tem InstallDate (formato YYYYMMDD)
+    if HAS_WINREG:
+        for hive_root in (winreg.HKEY_CURRENT_USER, winreg.HKEY_LOCAL_MACHINE):
+            for key_path in (
+                r"Software\Microsoft\Windows\CurrentVersion\Uninstall\RobloxPlayer",
+                r"Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\RobloxPlayer",
+            ):
+                try:
+                    key = winreg.OpenKey(hive_root, key_path)
+                    try:
+                        install_str, _ = winreg.QueryValueEx(key, "InstallDate")
+                        # Formato típico: "20260527"
+                        if isinstance(install_str, str) and len(install_str) == 8:
+                            return datetime.strptime(install_str, "%Y%m%d")
+                    finally:
+                        winreg.CloseKey(key)
+                except OSError:
+                    continue
+
+    # 2. Subfolder mais antigo em Versions/ (não muda em reinstall, só em update)
+    versions_dir = os.path.expandvars(r"%LOCALAPPDATA%\Roblox\Versions")
+    if os.path.isdir(versions_dir):
+        try:
+            subdirs = [os.path.join(versions_dir, d) for d in os.listdir(versions_dir)]
+            subdirs = [d for d in subdirs if os.path.isdir(d)]
+            if subdirs:
+                oldest_ctime = min(os.path.getctime(d) for d in subdirs)
+                return datetime.fromtimestamp(oldest_ctime)
+        except OSError:
+            pass
+
+    # 3. Fallback: creation time da pasta raiz (pode ser enganoso)
+    for path in (
         os.path.expandvars(r"%LOCALAPPDATA%\Roblox"),
         os.path.expandvars(r"%LOCALAPPDATA%\Bloxstrap"),
-    ]
-    earliest = None
-    for path in candidates:
+    ):
         if os.path.isdir(path):
             try:
-                ctime = datetime.fromtimestamp(os.path.getctime(path))
-                if earliest is None or ctime < earliest:
-                    earliest = ctime
+                return datetime.fromtimestamp(os.path.getctime(path))
             except OSError:
                 continue
-    return earliest
+    return None
 
 
 def scan_fresh_install() -> dict:
-    """Combina 6 sinais pra detectar PC formatado pra SS."""
+    """
+    Combina 6 sinais pra detectar PC formatado pra SS.
+
+    NOTA: sinais isolados são MEDIUM no máximo — PC novo legítimo, Windows
+    Reset por causa de vírus, etc. também acionam vários. Só vira HIGH quando
+    há SMOKING GUN: Roblox instalado < 6h após Windows. Multi-sinais combinados
+    são detectados via cross-correlation depois.
+    """
     items = []
     now = datetime.now()
 
@@ -162,26 +202,27 @@ def scan_fresh_install() -> dict:
     age_days = (now - install_date).days
     age_str = install_date.strftime("%Y-%m-%d %H:%M:%S")
 
-    # === Sinal 1: Idade do Windows ===
+    # === Sinal 1: Idade do Windows (MEDIUM no máximo isolado) ===
     if age_days < 1:
         items.append(_item(
-            label=f"⚠ Windows instalado HOJE ({install_date.strftime('%H:%M')})",
-            detail=f"InstallDate = {age_str}  ({(now - install_date).total_seconds() / 3600:.1f}h atrás)",
-            severity="high", matched="fresh-install-today",
+            label=f"Windows instalado HOJE ({install_date.strftime('%H:%M')})",
+            detail=f"InstallDate = {age_str}  ({(now - install_date).total_seconds() / 3600:.1f}h atrás). "
+                   f"Pode ser PC novo, reset por vírus, ou formatação pra SS — verifique outros sinais.",
+            severity="medium", matched="fresh-install-today",
             timestamp=age_str,
         ))
     elif age_days < 3:
         items.append(_item(
             label=f"Windows instalado há {age_days} dia(s)",
             detail=f"InstallDate = {age_str}",
-            severity="high", matched="fresh-install-3d",
+            severity="medium", matched="fresh-install-3d",
             timestamp=age_str,
         ))
     elif age_days < 7:
         items.append(_item(
             label=f"Windows instalado há {age_days} dia(s)",
             detail=f"InstallDate = {age_str}",
-            severity="medium", matched="fresh-install-7d",
+            severity="low", matched="fresh-install-7d",
             timestamp=age_str,
         ))
     elif age_days < 21:
@@ -192,33 +233,33 @@ def scan_fresh_install() -> dict:
             timestamp=age_str,
         ))
 
-    # === Sinal 2: Prefetch count ===
+    # === Sinal 2: Prefetch count (MEDIUM no máximo isolado) ===
     pf_count = _count_prefetch()
     if pf_count is not None:
         if pf_count < 10:
             items.append(_item(
                 label=f"Prefetch quase VAZIA ({pf_count} entries)",
-                detail="Normal: 100-500. < 10 = formatação recente OU limpa agressiva.",
-                severity="high", matched="prefetch-empty",
+                detail="Normal: 100-500. < 10 = formatação recente, limpa agressiva, ou Windows Reset.",
+                severity="medium", matched="prefetch-empty",
             ))
         elif pf_count < 30:
             items.append(_item(
                 label=f"Prefetch baixa ({pf_count} entries)",
                 detail="Normal: 100-500. < 30 indica formatação OU cleaner usado.",
-                severity="medium", matched="prefetch-low",
+                severity="low", matched="prefetch-low",
             ))
 
-    # === Sinal 3: UserAssist count ===
+    # === Sinal 3: UserAssist count (LOW/MEDIUM isolado) ===
     ua_count = _count_userassist()
     if ua_count is not None and ua_count < 15:
         items.append(_item(
             label=f"UserAssist quase vazia ({ua_count} entries)",
             detail="Normal: 50+ entries. Pouco uso = perfil novo / formatação.",
-            severity="high" if ua_count <= 5 else "medium",
+            severity="medium" if ua_count <= 5 else "low",
             matched="userassist-empty",
         ))
 
-    # === Sinal 4: Volume C: creation date ===
+    # === Sinal 4: Volume C: creation date (MEDIUM isolado) ===
     vol_creation = _get_volume_creation("C:")
     if vol_creation is not None:
         vol_age_days = (now - vol_creation).days
@@ -226,37 +267,44 @@ def scan_fresh_install() -> dict:
             items.append(_item(
                 label=f"Volume C: criado há {vol_age_days} dia(s)",
                 detail=f"NTFS Volume Creation Time = {vol_creation.strftime('%Y-%m-%d')}. "
-                       f"Confirma formatação física (não só Windows reset).",
-                severity="high", matched="fresh-volume",
+                       f"Confirma formatação física (não só Windows Reset).",
+                severity="medium", matched="fresh-volume",
                 timestamp=vol_creation.strftime("%Y-%m-%d %H:%M:%S"),
             ))
         elif vol_age_days < 21:
             items.append(_item(
                 label=f"Volume C: criado há {vol_age_days} dias",
                 detail=f"NTFS Creation = {vol_creation.strftime('%Y-%m-%d')}",
-                severity="medium", matched="recent-volume",
+                severity="low", matched="recent-volume",
                 timestamp=vol_creation.strftime("%Y-%m-%d %H:%M:%S"),
             ))
 
-    # === Sinal 5: Gap Roblox → Windows install ===
+    # === Sinal 5: Gap Roblox → Windows install (SMOKING GUN — HIGH justificado) ===
     roblox_install = _get_roblox_install()
     if roblox_install and install_date:
         gap_hours = (roblox_install - install_date).total_seconds() / 3600
-        if 0 < gap_hours < 6:
+        if 0 < gap_hours < 2:
+            # Realmente smoking gun: formata + instala Roblox + abre = sequência prep pra cheat
             items.append(_item(
                 label=f"Roblox instalado {gap_hours:.1f}h DEPOIS de formatar",
                 detail=f"Windows: {age_str}\nRoblox: {roblox_install.strftime('%Y-%m-%d %H:%M:%S')}\n"
-                       f"Sequência clássica: formata → instala Roblox → cheata.",
+                       f"Sequência clássica: formata → instala Roblox → cheata na mesma noite.",
                 severity="high", matched="roblox-right-after-format",
+            ))
+        elif 0 < gap_hours < 12:
+            items.append(_item(
+                label=f"Roblox instalado {gap_hours:.1f}h depois do Windows",
+                detail=f"Windows: {age_str}\nRoblox: {roblox_install.strftime('%Y-%m-%d %H:%M:%S')}",
+                severity="medium", matched="roblox-shortly-after",
             ))
         elif 0 < gap_hours < 48:
             items.append(_item(
                 label=f"Roblox instalado {gap_hours:.0f}h depois do Windows",
                 detail=f"Windows: {age_str}\nRoblox: {roblox_install.strftime('%Y-%m-%d %H:%M:%S')}",
-                severity="medium", matched="roblox-shortly-after",
+                severity="low", matched="roblox-after-format-48h",
             ))
 
-    # === Sinal 6: Recent files folder ===
+    # === Sinal 6: Recent files folder (LOW isolado) ===
     recent_count = 0
     recent = os.path.expandvars(r"%APPDATA%\Microsoft\Windows\Recent")
     if os.path.isdir(recent):
@@ -268,8 +316,8 @@ def scan_fresh_install() -> dict:
     if recent_count < 5:
         items.append(_item(
             label=f"Pasta Recent quase vazia ({recent_count} atalhos)",
-            detail="Normal: 50+ atalhos de arquivos abertos. Vazio = formatação recente.",
-            severity="medium" if recent_count > 0 else "high",
+            detail="Normal: 50+ atalhos. Vazio = formatação recente OU usuário que não abre arquivos.",
+            severity="low" if recent_count > 0 else "medium",
             matched="recent-folder-empty",
         ))
 
