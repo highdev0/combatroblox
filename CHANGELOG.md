@@ -2,6 +2,41 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.4.0] - 2026-05-28
+
+UI redesign do relatório HTML — agora layout dashboard profissional.
+
+### Added
+
+#### 📐 Sidebar sticky com TOC
+- Navegação lateral fixa com link pra cada section.
+- Badge vermelha com contador de hits ao lado de cada scanner.
+- Highlight visual de scanners com hits vs limpos.
+- Score do veredito badge no topo da sidebar.
+
+#### 📈 Charts
+- **Donut SVG** mostrando distribuição de severidade (high/medium/low)
+  com score numérico no centro.
+- **Bar chart** dos top 10 scanners por número de hits.
+- Tudo SVG/CSS puro, zero dependências.
+
+#### 🔽 Sections colapsáveis
+- Cada section vira `<details>`. Limpas começam fechadas, com hits
+  abertas. Telador foca no que importa.
+
+#### ✅ Empty state
+- Quando 0 hits totais, mostra card verde com checkmark grande,
+  explicação clara, e aviso de heurística (não é prova definitiva).
+
+#### 🖨️ Print CSS
+- `@media print` esconde sidebar/controls, faz fundo branco,
+  expande sections. Telador pode imprimir relatório limpo.
+
+#### 📱 Responsive
+- `@media (max-width: 700px)` reorganiza pra mobile (sidebar vira
+  topo).
+- `@media (max-width: 900px)` colapsa charts em 1 coluna.
+
 ## [3.3.0] - 2026-05-28
 
 QoL release — Markdown export + quick mode.

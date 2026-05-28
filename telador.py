@@ -87,7 +87,7 @@ BANNER = r"""
 
 def print_banner():
     print(f"{RED}{BANNER}{RESET}")
-    print(f"{GREY}  Versão 3.3.0  ·  34 scanners  ·  Markdown export  ·  Quick mode{RESET}\n")
+    print(f"{GREY}  Versão 3.4.0  ·  UI redesign  ·  Sidebar  ·  Charts  ·  Collapsible{RESET}\n")
     self_hash = report_signing.get_self_hash()
     if self_hash:
         print(f"{GREY}  SHA256 deste exe: {self_hash[:16]}...{self_hash[-16:]}{RESET}")

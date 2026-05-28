@@ -97,15 +97,21 @@ def _render_section(finding: dict) -> str:
         msg = finding.get("error") or "Nenhum vestígio encontrado nesta categoria."
         table = f'<p class="empty">{_escape(msg)}</p>'
 
+    slug = finding["name"].lower().replace(" ", "-").replace("(", "").replace(")", "").replace("/", "-")
+    n_items = len(finding.get("items", []))
+    # Sections sem hits começam fechadas; com hits, abertas
+    open_attr = " open" if n_items > 0 else ""
     return f"""
-    <section class="card status-{status}">
-        <div class="card-head">
-            <h2>{name}</h2>
-            <span class="badge" style="background:{badge_color}">{badge_text}</span>
-        </div>
-        <p class="desc">{desc}</p>
-        <p class="summary">{summary}</p>
-        {table}
+    <section class="card status-{status}" id="scan-{slug}">
+        <details{open_attr}>
+            <summary class="card-head">
+                <h2>{name}</h2>
+                <span class="badge" style="background:{badge_color}">{badge_text}</span>
+            </summary>
+            <p class="desc">{desc}</p>
+            <p class="summary">{summary}</p>
+            {table}
+        </details>
     </section>
     """
 
@@ -401,6 +407,150 @@ def _render_pe_section(findings: list) -> str:
     """
 
 
+def _render_sidebar(findings: list, verdict: dict = None) -> str:
+    """Sidebar sticky com TOC e contador por section."""
+    links = [
+        ('summary', '📊 Resumo', None),
+        ('high-confidence', '🎯 Cross-Correlation', None),
+        ('fp-stats', '🛡️ FP Filter', None),
+        ('timeline', '🕐 Timeline', None),
+        ('pe-analysis', '🔬 PE Analysis', None),
+        ('charts', '📈 Charts', None),
+        ('sysinfo', '💻 Sistema', None),
+        ('screenshots', '📸 Screenshots', None),
+    ]
+    main_links = "".join(
+        f'<a href="#{anchor}" class="nav-link">{label}</a>'
+        for anchor, label, _ in links
+    )
+
+    scanner_links = []
+    for f in findings:
+        n_items = len(f.get("items", []))
+        slug = f["name"].lower().replace(" ", "-").replace("(", "").replace(")", "").replace("/", "-")
+        if n_items > 0:
+            badge = f'<span class="nav-badge">{n_items}</span>'
+            scanner_links.append(f'<a href="#scan-{slug}" class="nav-link nav-hit">{_escape(f["name"])}{badge}</a>')
+        else:
+            scanner_links.append(f'<a href="#scan-{slug}" class="nav-link nav-clean">{_escape(f["name"])}</a>')
+
+    score_badge = ""
+    if verdict:
+        score_badge = f'<div class="nav-score" style="background:{verdict.get("color", "#888")}">' \
+                       f'Score {verdict.get("score", 0)}</div>'
+
+    return f"""
+    <aside class="sidebar">
+        <div class="sidebar-head">
+            <h3>TELADOR BR</h3>
+            {score_badge}
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-group">
+                <div class="nav-group-title">Visão geral</div>
+                {main_links}
+            </div>
+            <div class="nav-group">
+                <div class="nav-group-title">Scanners ({len(findings)})</div>
+                {''.join(scanner_links)}
+            </div>
+        </nav>
+    </aside>
+    """
+
+
+def _render_charts(findings: list, verdict: dict) -> str:
+    """Donut do score + bar chart de hits por scanner."""
+    if not verdict:
+        return ""
+
+    high = verdict.get("high", 0)
+    med = verdict.get("medium", 0)
+    low = verdict.get("low", 0)
+    total = max(1, high + med + low)
+
+    # Donut chart com SVG inline (stroke-dasharray)
+    circumference = 2 * 3.14159 * 50  # raio 50
+    high_pct = high / total
+    med_pct = med / total
+    low_pct = low / total
+    high_dash = circumference * high_pct
+    med_dash = circumference * med_pct
+    low_dash = circumference * low_pct
+
+    donut = f"""
+    <div class="chart-card">
+        <h3>Distribuição de Severidade</h3>
+        <svg viewBox="0 0 140 140" class="donut">
+            <circle cx="70" cy="70" r="50" fill="none" stroke="#2a2a2e" stroke-width="14"/>
+            <circle cx="70" cy="70" r="50" fill="none" stroke="#ff4d4f" stroke-width="14"
+                stroke-dasharray="{high_dash:.1f} {circumference:.1f}" transform="rotate(-90 70 70)"/>
+            <circle cx="70" cy="70" r="50" fill="none" stroke="#ffb020" stroke-width="14"
+                stroke-dasharray="{med_dash:.1f} {circumference:.1f}"
+                stroke-dashoffset="{-high_dash:.1f}" transform="rotate(-90 70 70)"/>
+            <circle cx="70" cy="70" r="50" fill="none" stroke="#ffe066" stroke-width="14"
+                stroke-dasharray="{low_dash:.1f} {circumference:.1f}"
+                stroke-dashoffset="{-(high_dash + med_dash):.1f}" transform="rotate(-90 70 70)"/>
+            <text x="70" y="68" text-anchor="middle" fill="{verdict.get('color', '#fff')}"
+                font-size="22" font-weight="800">{verdict.get('score', 0)}</text>
+            <text x="70" y="86" text-anchor="middle" fill="#888" font-size="10">SCORE</text>
+        </svg>
+        <div class="donut-legend">
+            <span><span class="dot" style="background:#ff4d4f"></span> High {high}</span>
+            <span><span class="dot" style="background:#ffb020"></span> Medium {med}</span>
+            <span><span class="dot" style="background:#ffe066"></span> Low {low}</span>
+        </div>
+    </div>
+    """
+
+    # Bar chart top scanners
+    scanner_counts = [(f["name"], len(f.get("items", []))) for f in findings]
+    scanner_counts = [(n, c) for n, c in scanner_counts if c > 0]
+    scanner_counts.sort(key=lambda x: -x[1])
+    top = scanner_counts[:10]
+    max_c = max((c for _, c in top), default=1)
+
+    bars = "".join(
+        f'<div class="bar-row">'
+        f'<span class="bar-label">{_escape(name)}</span>'
+        f'<div class="bar-track"><div class="bar-fill" style="width:{(c/max_c)*100:.1f}%"></div></div>'
+        f'<span class="bar-count">{c}</span>'
+        f'</div>'
+        for name, c in top
+    )
+    bar_chart = f"""
+    <div class="chart-card">
+        <h3>Hits por Scanner (top {len(top)})</h3>
+        <div class="bars">{bars or '<p class="empty">Sem hits</p>'}</div>
+    </div>
+    """
+
+    return f"""
+    <section class="card charts" id="charts">
+        <h2>📈 Visualizações</h2>
+        <div class="charts-grid">
+            {donut}
+            {bar_chart}
+        </div>
+    </section>
+    """
+
+
+def _render_empty_state() -> str:
+    """Tela limpa bonita quando 0 hits totais."""
+    return """
+    <section class="card empty-state">
+        <div class="empty-icon">✅</div>
+        <h2>Tudo limpo</h2>
+        <p>Nenhum hit nas 34 categorias de detecção. Este sistema não apresenta
+        indícios de uso de executores Roblox conhecidos, scripts de exploit,
+        ou ferramentas de cheating.</p>
+        <p class="empty-sub">Lembre-se: detecção heurística pode ter falso-negativo (cheat novo,
+        renomeado). Faça SS visual também.</p>
+    </section>
+    """
+
+
 def _render_high_confidence(high_confidence: dict) -> str:
     """Section destacada com keywords que aparecem em 3+ fontes."""
     if not high_confidence:
@@ -556,7 +706,13 @@ def generate_html_report(findings: list[dict], sys_info: dict,
     timeline_html = _render_timeline(findings)
     pe_html = _render_pe_section(findings)
     controls_html = _render_controls()
+    charts_html = _render_charts(findings, verdict or {})
+    sidebar_html = _render_sidebar(findings, verdict)
     sections = "\n".join(_render_section(f) for f in findings)
+
+    # Empty state quando ZERO hits totais
+    total_hits = sum(len(f.get("items", [])) for f in findings)
+    empty_html = _render_empty_state() if total_hits == 0 else ""
 
     # Banner com hash do exe
     exe_hash = ""
@@ -663,6 +819,139 @@ def generate_html_report(findings: list[dict], sys_info: dict,
         border-radius: 6px;
     }
     .exe-hash code { color: #888; word-break: break-all; }
+
+    /* === Layout com sidebar === */
+    body { display: flex; padding: 0; min-height: 100vh; }
+    .sidebar {
+        position: sticky; top: 0; height: 100vh;
+        width: 260px; flex-shrink: 0;
+        background: #08080a; border-right: 1px solid #1f1f23;
+        padding: 20px 0; overflow-y: auto;
+    }
+    .sidebar-head {
+        padding: 0 20px 20px; border-bottom: 1px solid #1f1f23;
+    }
+    .sidebar-head h3 {
+        margin: 0 0 12px; font-size: 18px; letter-spacing: 2px;
+        background: linear-gradient(90deg, #ff4d4f, #ffb020);
+        -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .nav-score {
+        display: inline-block; padding: 6px 12px;
+        color: #000; font-weight: 800; font-size: 12px;
+        border-radius: 4px; letter-spacing: 1px;
+    }
+    .sidebar-nav { padding: 12px 0; }
+    .nav-group { margin-bottom: 20px; }
+    .nav-group-title {
+        padding: 8px 20px; color: #555; font-size: 10px;
+        text-transform: uppercase; letter-spacing: 2px; font-weight: 700;
+    }
+    .nav-link {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 8px 20px; color: #aaa; text-decoration: none;
+        font-size: 13px; transition: background .1s, color .1s;
+        border-left: 3px solid transparent;
+    }
+    .nav-link:hover { background: #131316; color: #fff; border-left-color: #ff4d4f; }
+    .nav-link.nav-hit { color: #e8e8e8; font-weight: 600; }
+    .nav-link.nav-clean { color: #555; }
+    .nav-badge {
+        background: #ff4d4f; color: #000; padding: 2px 8px;
+        border-radius: 10px; font-size: 11px; font-weight: 700;
+    }
+    .main-content {
+        flex: 1; padding: 24px; max-width: calc(100% - 260px);
+        scroll-padding-top: 20px;
+    }
+    .main-content > header { text-align: left; margin-bottom: 24px; }
+
+    /* === Collapsible sections === */
+    details > summary {
+        cursor: pointer; list-style: none; user-select: none;
+    }
+    details > summary::-webkit-details-marker { display: none; }
+    details > summary::before {
+        content: "▶"; display: inline-block; margin-right: 10px;
+        color: #555; font-size: 10px;
+        transition: transform .15s;
+    }
+    details[open] > summary::before { transform: rotate(90deg); }
+    details > summary:hover h2 { color: #ff4d4f; }
+
+    /* === Charts === */
+    .charts-grid {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+    }
+    @media (max-width: 900px) {
+        .charts-grid { grid-template-columns: 1fr; }
+    }
+    .chart-card {
+        background: #0e0e10; border: 1px solid #2a2a2e;
+        border-radius: 8px; padding: 16px;
+    }
+    .chart-card h3 {
+        margin: 0 0 12px; font-size: 13px; color: #aaa;
+        text-transform: uppercase; letter-spacing: 1px;
+    }
+    .donut { width: 100%; max-width: 220px; height: auto; display: block; margin: 0 auto; }
+    .donut-legend {
+        display: flex; justify-content: center; gap: 16px;
+        font-size: 12px; color: #aaa; margin-top: 12px; flex-wrap: wrap;
+    }
+    .donut-legend .dot {
+        display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+        margin-right: 6px; vertical-align: middle;
+    }
+    .bars { display: flex; flex-direction: column; gap: 8px; }
+    .bar-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+    .bar-label {
+        flex: 0 0 35%; color: #ccc; text-align: right; overflow: hidden;
+        text-overflow: ellipsis; white-space: nowrap;
+    }
+    .bar-track {
+        flex: 1; height: 16px; background: #0a0a0c; border-radius: 3px;
+        overflow: hidden;
+    }
+    .bar-fill {
+        height: 100%; background: linear-gradient(90deg, #ff4d4f, #ffb020);
+        transition: width .5s;
+    }
+    .bar-count {
+        flex: 0 0 30px; text-align: left; color: #ffb020; font-weight: 700;
+    }
+
+    /* === Empty state === */
+    .empty-state {
+        text-align: center; padding: 40px 20px;
+        border: 2px dashed #3fbf7f44;
+    }
+    .empty-icon { font-size: 64px; margin-bottom: 16px; }
+    .empty-state h2 {
+        color: #3fbf7f; margin: 0 0 12px;
+        font-size: 28px; letter-spacing: 1px;
+    }
+    .empty-state p { color: #aaa; max-width: 540px; margin: 0 auto 8px; }
+    .empty-state .empty-sub { color: #666; font-size: 12px; margin-top: 16px; }
+
+    /* === Print === */
+    @media print {
+        body { background: white; color: black; display: block; }
+        .sidebar, .controls { display: none !important; }
+        .main-content { max-width: 100%; padding: 0; }
+        .card { break-inside: avoid; border-color: #ccc; background: white; }
+        .card h2 { color: black; }
+        code { color: #c5780b; background: #f5f5f5; }
+        details { open: true; }
+        details > summary::before { display: none; }
+    }
+
+    /* === Mobile === */
+    @media (max-width: 700px) {
+        body { flex-direction: column; }
+        .sidebar { position: relative; width: 100%; height: auto; }
+        .main-content { max-width: 100%; }
+    }
     """
 
     html_doc = f"""<!DOCTYPE html>
@@ -677,16 +966,21 @@ def generate_html_report(findings: list[dict], sys_info: dict,
         <h1>TELADOR BR</h1>
         <div class="sub">Relatório gerado em {sys_info.get('scan_time', '')}</div>
     </header>
-    {summary_html}
-    {hc_html}
-    {fp_html}
-    {timeline_html}
-    {pe_html}
-    {sys_html}
-    {screens_html}
+    {sidebar_html}
+    <main class="main-content">
+    <span id="summary"></span>{summary_html}
+    {empty_html}
+    <span id="high-confidence"></span>{hc_html}
+    <span id="fp-stats"></span>{fp_html}
+    <span id="timeline"></span>{timeline_html}
+    <span id="pe-analysis"></span>{pe_html}
+    {charts_html}
+    <span id="sysinfo"></span>{sys_html}
+    <span id="screenshots"></span>{screens_html}
     {controls_html}
     {sections}
     {exe_hash}
+    </main>
     <footer>
         Resultado é heurístico (baseado em nomes/locais conhecidos).
         Pode haver falso positivo (ex.: alguém pesquisou sobre o tema) ou falso negativo (cheat com nome trocado).
