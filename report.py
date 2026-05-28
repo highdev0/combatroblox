@@ -737,6 +737,95 @@ CONTROLS_JS = """
         img.style.cursor = 'zoom-in';
         img.addEventListener('click', () => openLightbox(img.src, img.alt));
     });
+
+    // === Number counter pros stats ===
+    function animateNumber(el, target, duration = 1000) {
+        const start = performance.now();
+        const startVal = 0;
+        function tick(now) {
+            const elapsed = now - start;
+            const progress = Math.min(elapsed / duration, 1);
+            // easeOutCubic
+            const eased = 1 - Math.pow(1 - progress, 3);
+            const current = startVal + (target - startVal) * eased;
+            el.textContent = Number.isInteger(target)
+                ? Math.round(current)
+                : current.toFixed(1);
+            if (progress < 1) requestAnimationFrame(tick);
+            else el.textContent = target;
+        }
+        requestAnimationFrame(tick);
+    }
+
+    document.querySelectorAll('.stat .num').forEach(el => {
+        const raw = el.textContent.trim();
+        const target = parseFloat(raw);
+        if (isNaN(target)) return;
+        // Aguarda animação de entrada terminar antes do counter
+        setTimeout(() => animateNumber(el, target, 1200), 300);
+    });
+
+    // === Scroll reveal pra sections fora da viewport inicial ===
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.animation = 'fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both';
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.1, rootMargin: '0px 0px -80px 0px' });
+
+    // Observa cards que entram via scroll (não os primeiros 6 que já animam no load)
+    document.querySelectorAll('.main-content > .card').forEach((card, i) => {
+        if (i < 6) return;
+        card.style.opacity = '0';
+        observer.observe(card);
+    });
+
+    // === Ripple effect on click pros buttons ===
+    document.querySelectorAll('.filter-btn, button').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            const ripple = document.createElement('span');
+            const rect = this.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            ripple.style.cssText = `
+                position: absolute;
+                left: ${e.clientX - rect.left - size/2}px;
+                top: ${e.clientY - rect.top - size/2}px;
+                width: ${size}px; height: ${size}px;
+                border-radius: 50%;
+                background: rgba(255,255,255,0.3);
+                pointer-events: none;
+                animation: rippleExpand 0.6s ease-out;
+            `;
+            this.style.position = this.style.position || 'relative';
+            this.style.overflow = 'hidden';
+            this.appendChild(ripple);
+            setTimeout(() => ripple.remove(), 600);
+        });
+    });
+
+    // Add ripple keyframe at runtime
+    const style = document.createElement('style');
+    style.textContent = `@keyframes rippleExpand {
+        from { transform: scale(0); opacity: 1; }
+        to   { transform: scale(2.5); opacity: 0; }
+    }`;
+    document.head.appendChild(style);
+
+    // === Verdict big text — efeito de magnet hover ===
+    const verdict = document.querySelector('.big-verdict');
+    if (verdict) {
+        verdict.addEventListener('mousemove', (e) => {
+            const rect = verdict.getBoundingClientRect();
+            const x = (e.clientX - rect.left - rect.width / 2) / 30;
+            const y = (e.clientY - rect.top - rect.height / 2) / 30;
+            verdict.style.transform = `translate(${x}px, ${y}px)`;
+        });
+        verdict.addEventListener('mouseleave', () => {
+            verdict.style.transform = '';
+        });
+    }
 })();
 </script>
 """
@@ -1300,9 +1389,387 @@ def generate_html_report(findings: list[dict], sys_info: dict,
     .brand-logo {
         width: 40px; height: 40px; flex-shrink: 0;
         filter: drop-shadow(0 2px 8px rgba(255, 77, 79, 0.4));
-        animation: scaleIn 0.5s var(--ease-out) both;
+        animation: scaleIn 0.5s var(--ease-out) both, logoFloat 6s ease-in-out infinite;
+        transition: transform 0.3s var(--ease-out);
+    }
+    .brand-row:hover .brand-logo {
+        transform: rotate(-8deg) scale(1.1);
+        filter: drop-shadow(0 4px 16px rgba(255, 77, 79, 0.7));
     }
     .brand-row h3 { margin: 0; line-height: 1; }
+
+    /* ================================================================
+       === PREMIUM ANIMATION PASS — make it feel alive
+       ================================================================ */
+
+    @keyframes logoFloat {
+        0%, 100% { transform: translateY(0); }
+        50%      { transform: translateY(-3px); }
+    }
+    @keyframes slideRight {
+        from { opacity: 0; transform: translateX(-20px); }
+        to   { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes slideLeft {
+        from { opacity: 0; transform: translateX(20px); }
+        to   { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes glowPulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(255, 77, 79, 0); }
+        50%      { box-shadow: 0 0 0 12px rgba(255, 77, 79, 0.15); }
+    }
+    @keyframes drawCircle {
+        from { stroke-dashoffset: 314; }
+        to   { stroke-dashoffset: var(--final-offset, 0); }
+    }
+    @keyframes barGrow {
+        from { width: 0; }
+        to   { width: var(--final-width, 100%); }
+    }
+    @keyframes countUp {
+        from { opacity: 0; transform: translateY(8px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes gradientShift {
+        0%   { background-position: 0% 50%; }
+        50%  { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+    @keyframes sweep {
+        0%   { left: -100%; }
+        100% { left: 100%; }
+    }
+    @keyframes statPop {
+        0%   { transform: scale(0.8); opacity: 0; }
+        50%  { transform: scale(1.05); }
+        100% { transform: scale(1); opacity: 1; }
+    }
+    @keyframes verdictReveal {
+        0%   { opacity: 0; transform: scale(0.7) rotateX(-30deg); filter: blur(4px); }
+        60%  { transform: scale(1.05) rotateX(0); filter: blur(0); }
+        100% { opacity: 1; transform: scale(1) rotateX(0); }
+    }
+    @keyframes shimmerBar {
+        0%   { background-position: -1000px 0; }
+        100% { background-position: 1000px 0; }
+    }
+    @keyframes hoverFloat {
+        0%, 100% { transform: translateY(0); }
+        50%      { transform: translateY(-4px); }
+    }
+
+    /* === Sidebar slide-in === */
+    .sidebar {
+        animation: slideRight 0.5s var(--ease-out) both;
+    }
+    .sidebar-head { animation: countUp 0.6s 0.1s var(--ease-out) both; }
+    .nav-group { animation: countUp 0.5s var(--ease-out) both; }
+    .nav-group:nth-child(1) { animation-delay: 0.2s; }
+    .nav-group:nth-child(2) { animation-delay: 0.3s; }
+    .nav-link {
+        position: relative; overflow: hidden;
+    }
+    .nav-link::after {
+        content: ''; position: absolute; top: 0; left: -100%;
+        width: 50%; height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 77, 79, 0.08), transparent);
+        transition: left 0.5s var(--ease-out);
+    }
+    .nav-link:hover::after { left: 200%; }
+    .nav-link.nav-hit .nav-badge {
+        animation: glowPulse 2.5s ease-in-out infinite;
+    }
+
+    /* === Score badge breath === */
+    .nav-score {
+        animation: scaleIn 0.6s 0.4s var(--ease-out) both, glowPulse 3s 1s ease-in-out infinite;
+    }
+
+    /* === Stats premium animation === */
+    .stat {
+        animation: statPop 0.5s var(--ease-out) both;
+        position: relative; overflow: hidden;
+    }
+    .stat:nth-child(1) { animation-delay: 50ms; }
+    .stat:nth-child(2) { animation-delay: 100ms; }
+    .stat:nth-child(3) { animation-delay: 150ms; }
+    .stat:nth-child(4) { animation-delay: 200ms; }
+    .stat:nth-child(5) { animation-delay: 250ms; }
+    .stat:nth-child(6) { animation-delay: 300ms; }
+    .stat::before {
+        content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+        background: linear-gradient(90deg, transparent,
+                    rgba(255, 255, 255, 0.04), transparent);
+        transition: left 0.7s var(--ease-out);
+    }
+    .stat:hover::before { left: 100%; }
+    .stat .num {
+        animation: countUp 0.7s 0.3s var(--ease-out) both;
+        background: linear-gradient(135deg, currentColor, currentColor);
+        -webkit-background-clip: text; background-clip: text;
+    }
+
+    /* === Verdict 3D reveal === */
+    .big-verdict {
+        animation: verdictReveal 0.9s var(--ease-out) both;
+        perspective: 600px;
+        position: relative;
+    }
+    .big-verdict::after {
+        content: ''; position: absolute; inset: -8px;
+        background: radial-gradient(circle at center, currentColor 0%, transparent 60%);
+        opacity: 0.15; z-index: -1;
+        filter: blur(20px);
+    }
+
+    /* === Cards premium === */
+    .card {
+        position: relative; overflow: hidden;
+        backdrop-filter: blur(10px);
+        transition: transform 0.25s var(--ease-out),
+                    border-color 0.25s var(--ease),
+                    box-shadow 0.25s var(--ease);
+    }
+    .card::before {
+        content: ''; position: absolute; top: 0; left: 0;
+        width: 100%; height: 1px;
+        background: linear-gradient(90deg, transparent,
+                    rgba(255, 77, 79, 0.4), transparent);
+        opacity: 0; transition: opacity 0.3s;
+    }
+    .card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3),
+                    0 0 0 1px rgba(255, 77, 79, 0.15);
+    }
+    .card:hover::before { opacity: 1; }
+    .card.status-suspicious {
+        border-color: rgba(255, 77, 79, 0.25);
+    }
+    .card.status-suspicious::after {
+        content: ''; position: absolute; top: 0; right: 0;
+        width: 4px; height: 100%;
+        background: linear-gradient(180deg, var(--c-red), var(--c-orange));
+        opacity: 0.8;
+    }
+
+    /* === Bars animadas === */
+    .bar-fill {
+        animation: barGrow 1.2s 0.3s var(--ease-out) both;
+        background: linear-gradient(90deg, var(--c-red), var(--c-orange), var(--c-yellow));
+        background-size: 200% 100%;
+        animation: barGrow 1.2s 0.3s var(--ease-out) both,
+                   gradientShift 4s ease-in-out infinite;
+        position: relative; overflow: hidden;
+    }
+    .bar-fill::after {
+        content: ''; position: absolute; top: 0; left: 0;
+        width: 100%; height: 100%;
+        background: linear-gradient(90deg, transparent,
+                    rgba(255, 255, 255, 0.3), transparent);
+        background-size: 200% 100%;
+        animation: shimmerBar 3s infinite;
+    }
+
+    /* === Donut chart drawing animation === */
+    .donut circle:not(:first-child) {
+        stroke-dasharray: 0 314;
+        animation: drawCircle 1.5s 0.2s var(--ease-out) both;
+        transform-origin: center;
+    }
+    .donut text {
+        animation: countUp 0.8s 1s var(--ease-out) both;
+    }
+
+    /* === Timeline dots pop in === */
+    .timeline .tl-dot {
+        animation: statPop 0.4s var(--ease-out) both,
+                   glowPulse 3s ease-in-out infinite;
+        transition: transform 0.2s var(--ease-out), box-shadow 0.2s;
+    }
+    .timeline .tl-dot:nth-child(odd)  { animation-delay: calc(var(--i, 0) * 30ms); }
+    .timeline .tl-dot:hover {
+        transform: translate(-50%, -50%) scale(2.5);
+        z-index: 50;
+        box-shadow: 0 0 24px currentColor;
+    }
+
+    /* === Empty state celebration === */
+    .empty-state .empty-icon {
+        animation: scaleIn 0.8s var(--ease-out) both,
+                   hoverFloat 3s 1s ease-in-out infinite;
+        display: inline-block;
+    }
+    .empty-state h2 {
+        animation: countUp 0.6s 0.2s var(--ease-out) both;
+    }
+    .empty-state p {
+        animation: countUp 0.6s 0.4s var(--ease-out) both;
+    }
+
+    /* === Header gradient sweep === */
+    .page-header h1 {
+        background: linear-gradient(90deg,
+            #ff4d4f 0%, #ff7a3f 25%, #ffb020 50%,
+            #ff7a3f 75%, #ff4d4f 100%);
+        background-size: 300% 100%;
+        -webkit-background-clip: text; background-clip: text;
+        color: transparent;
+        animation: gradientShift 6s ease-in-out infinite,
+                   countUp 0.7s var(--ease-out) both;
+    }
+
+    /* === Charts entry === */
+    .chart-card {
+        animation: scaleIn 0.6s var(--ease-out) both;
+        transition: transform 0.3s var(--ease-out),
+                    box-shadow 0.3s;
+        position: relative;
+    }
+    .chart-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 16px 32px rgba(0, 0, 0, 0.25);
+    }
+    .chart-card:nth-child(1) { animation-delay: 0.1s; }
+    .chart-card:nth-child(2) { animation-delay: 0.2s; }
+
+    /* === Filter buttons === */
+    .filter-btn {
+        position: relative; overflow: hidden;
+        transition: transform 0.15s var(--ease-out),
+                    box-shadow 0.15s, opacity 0.15s;
+    }
+    .filter-btn::before {
+        content: ''; position: absolute; inset: 0;
+        background: rgba(255, 255, 255, 0.15);
+        opacity: 0; transition: opacity 0.15s;
+    }
+    .filter-btn:hover {
+        transform: translateY(-1px) scale(1.02);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    .filter-btn:hover::before { opacity: 1; }
+    .filter-btn:active { transform: translateY(0) scale(0.98); }
+
+    /* === Search input glow on focus === */
+    .controls input {
+        transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+    }
+    .controls input:focus {
+        border-color: var(--c-red);
+        box-shadow: 0 0 0 4px rgba(255, 77, 79, 0.15);
+        background: var(--c-bg-2);
+    }
+
+    /* === Severity row hover === */
+    tbody tr {
+        transition: background 0.2s var(--ease-out);
+    }
+    tbody tr:hover {
+        background: rgba(255, 77, 79, 0.05);
+    }
+    tbody tr.row-high { animation: countUp 0.4s var(--ease-out) both; }
+    tbody tr.row-high:hover {
+        background: rgba(255, 77, 79, 0.12);
+    }
+
+    /* === Sev dot pulse for HIGH === */
+    .row-high .sev-dot {
+        animation: glowPulse 2s ease-in-out infinite;
+    }
+
+    /* === Code copy ripple === */
+    code {
+        position: relative; overflow: hidden;
+        transition: background 0.15s, color 0.15s, transform 0.15s;
+    }
+    code:active { transform: scale(0.97); }
+
+    /* === Lightbox more dramatic === */
+    .lightbox {
+        animation: scaleIn 0.25s var(--ease-out);
+    }
+    .lightbox img {
+        animation: verdictReveal 0.4s 0.05s var(--ease-out) both;
+        transition: transform 0.3s var(--ease-out);
+    }
+    .lightbox img:hover {
+        transform: scale(1.02);
+    }
+    .lightbox-close {
+        transition: background 0.2s, transform 0.2s;
+    }
+    .lightbox-close:hover {
+        background: var(--c-red) !important;
+        color: #000 !important;
+        transform: rotate(90deg) scale(1.1);
+    }
+
+    /* === Toast premium === */
+    .toast {
+        animation: scaleIn 0.3s var(--ease-out) both;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5),
+                    0 0 0 1px rgba(63, 191, 127, 0.4);
+        backdrop-filter: blur(8px);
+    }
+
+    /* === Sidebar nav stagger === */
+    .nav-link {
+        animation: slideRight 0.35s var(--ease-out) both;
+    }
+    .nav-link:nth-child(1)  { animation-delay: 0.25s; }
+    .nav-link:nth-child(2)  { animation-delay: 0.28s; }
+    .nav-link:nth-child(3)  { animation-delay: 0.31s; }
+    .nav-link:nth-child(4)  { animation-delay: 0.34s; }
+    .nav-link:nth-child(5)  { animation-delay: 0.37s; }
+    .nav-link:nth-child(6)  { animation-delay: 0.40s; }
+    .nav-link:nth-child(7)  { animation-delay: 0.43s; }
+    .nav-link:nth-child(8)  { animation-delay: 0.46s; }
+    .nav-link:nth-child(9)  { animation-delay: 0.49s; }
+    .nav-link:nth-child(n+10) { animation-delay: 0.52s; }
+
+    /* === Smooth scroll === */
+    html { scroll-behavior: smooth; }
+
+    /* === Better borders w/ gradient on hover === */
+    .high-confidence {
+        position: relative;
+    }
+    .high-confidence::before {
+        content: ''; position: absolute; inset: 0;
+        border-radius: 10px;
+        padding: 2px;
+        background: linear-gradient(135deg, var(--c-red), var(--c-orange));
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor; mask-composite: exclude;
+        pointer-events: none;
+        animation: gradientShift 4s ease-in-out infinite;
+    }
+
+    /* === Details summary smooth === */
+    details > summary::before {
+        transition: transform 0.25s var(--ease-out), color 0.2s;
+    }
+    details[open] > summary::before {
+        color: var(--c-red);
+    }
+    details summary h2 {
+        transition: color 0.2s, transform 0.2s var(--ease-out);
+    }
+    details summary:hover h2 {
+        transform: translateX(2px);
+        color: var(--c-orange);
+    }
+
+    /* === FP badge bounce === */
+    .fp-badge {
+        animation: statPop 0.4s var(--ease-out) both;
+        animation-delay: 0.6s;
+        cursor: help;
+        transition: transform 0.15s;
+    }
+    .fp-badge:hover { transform: scale(1.1); }
     """
 
     html_doc = f"""<!DOCTYPE html>
