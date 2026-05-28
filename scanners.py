@@ -379,8 +379,14 @@ def _check_browser_db(db_path: str, browser_name: str) -> list:
     try:
         shutil.copy2(db_path, tmp)
     except (PermissionError, OSError):
+        # Tmp file leak fix: deletar antes de sair se copy falhou
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
         return items
 
+    conn = None
     try:
         conn = sqlite3.connect(tmp)
         cur = conn.cursor()
@@ -437,10 +443,16 @@ def _check_browser_db(db_path: str, browser_name: str) -> list:
         except sqlite3.OperationalError:
             pass
 
-        conn.close()
     except sqlite3.DatabaseError:
         pass
     finally:
+        # Garante close mesmo se exception não-OperationalError aconteceu
+        # (sem isso, o arquivo tmp fica lockado no Windows e o unlink falha).
+        if conn is not None:
+            try:
+                conn.close()
+            except sqlite3.Error:
+                pass
         try:
             os.unlink(tmp)
         except OSError:

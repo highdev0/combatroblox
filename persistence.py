@@ -197,11 +197,34 @@ def scan_scheduled_tasks() -> dict:
     Procura por task names ou comandos que mencionem executores.
     """
     try:
+        # schtasks output usa codepage do console (cp850 em PT-BR, cp1252 em
+        # outros). utf-8 era errado — perdia acentos em task names.
+        # text=False + decode manual com fallback é mais robusto.
         result = subprocess.run(
             ["schtasks", "/query", "/fo", "csv", "/v"],
-            capture_output=True, text=True, timeout=20,
-            encoding="utf-8", errors="replace",
+            capture_output=True, timeout=20,
         )
+        # Tenta cp850 (DOS BR), fallback cp1252 (Win ANSI), fallback utf-8
+        stdout_bytes = result.stdout or b""
+        stderr_bytes = result.stderr or b""
+        for enc in ("cp850", "cp1252", "utf-8"):
+            try:
+                stdout_text = stdout_bytes.decode(enc)
+                stderr_text = stderr_bytes.decode(enc, errors="replace")
+                break
+            except UnicodeDecodeError:
+                continue
+        else:
+            stdout_text = stdout_bytes.decode("utf-8", errors="replace")
+            stderr_text = stderr_bytes.decode("utf-8", errors="replace")
+        # Reconstrói result mantendo interface esperada abaixo
+        class _R:
+            pass
+        r = _R()
+        r.returncode = result.returncode
+        r.stdout = stdout_text
+        r.stderr = stderr_text
+        result = r
     except (FileNotFoundError, subprocess.TimeoutExpired) as e:
         return _result("Scheduled Tasks", "Tarefas agendadas do Windows", [], error=str(e))
 
