@@ -118,8 +118,14 @@ def scan_amcache():
             pass
 
     finally:
-        subprocess.run(["reg", "unload", AMCACHE_TEMP_HIVE],
-                       capture_output=True, timeout=15)
+        # reg unload pode falhar (reg.exe sumiu/timeout) — engole sem propagar
+        # pra não impedir o retorno do scanner. Hive ficaria montada até reboot,
+        # mas o scanner ainda devolve os items que conseguiu coletar.
+        try:
+            subprocess.run(["reg", "unload", AMCACHE_TEMP_HIVE],
+                           capture_output=True, timeout=15)
+        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+            pass
 
     return _result("Amcache (forense)",
                    "Hashes SHA1 e nomes de TODOS executáveis já rodados", items)

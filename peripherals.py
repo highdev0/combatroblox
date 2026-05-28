@@ -116,9 +116,15 @@ def _read_ghub_scripts_from_db(db_path: str) -> list[tuple[str, str]]:
     try:
         shutil.copy2(db_path, tmp)
     except (PermissionError, OSError):
+        # Tmp file leak fix
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
         return []
 
     findings = []
+    conn = None
     try:
         conn = sqlite3.connect(tmp)
         cur = conn.cursor()
@@ -145,10 +151,15 @@ def _read_ghub_scripts_from_db(db_path: str) -> list[tuple[str, str]]:
                     findings.append((kw, sev, f"row {row_id}: ...{ctx}..."))
         except sqlite3.OperationalError:
             pass
-        conn.close()
     except sqlite3.DatabaseError:
         pass
     finally:
+        # Garante close (sem isso, arquivo tmp fica lockado no Windows)
+        if conn is not None:
+            try:
+                conn.close()
+            except sqlite3.Error:
+                pass
         try:
             os.unlink(tmp)
         except OSError:
