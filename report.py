@@ -667,17 +667,54 @@ CONTROLS_JS = """
         applyAll();
     });
 
-    // Click pra copiar em code blocks
+    // Click pra copiar em code blocks (com toast)
+    function showToast(msg) {
+        const t = document.createElement('div');
+        t.className = 'toast'; t.textContent = msg;
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 1600);
+    }
     document.querySelectorAll('code').forEach(c => {
         c.style.cursor = 'pointer';
         c.title = 'Clique pra copiar';
-        c.addEventListener('click', () => {
+        c.addEventListener('click', (e) => {
+            if (e.target.closest('.lightbox')) return;
             navigator.clipboard.writeText(c.textContent).then(() => {
-                const orig = c.style.background;
-                c.style.background = '#3fbf7f';
-                setTimeout(() => { c.style.background = orig; }, 300);
+                showToast('✓ Copiado');
             }).catch(() => {});
         });
+    });
+
+    // === Lightbox pra screenshots ===
+    const lb = document.createElement('div');
+    lb.className = 'lightbox';
+    lb.innerHTML = '<button class="lightbox-close" aria-label="Fechar">✕</button>' +
+                   '<img alt="" />' +
+                   '<div class="lightbox-hint">Clique fora ou ESC pra fechar</div>';
+    document.body.appendChild(lb);
+    const lbImg = lb.querySelector('img');
+    const lbClose = lb.querySelector('.lightbox-close');
+
+    function openLightbox(src, alt) {
+        lbImg.src = src;
+        lbImg.alt = alt || '';
+        lb.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeLightbox() {
+        lb.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+    lb.addEventListener('click', (e) => {
+        if (e.target === lb || e.target === lbClose) closeLightbox();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeLightbox();
+    });
+
+    document.querySelectorAll('.screenshots img').forEach(img => {
+        img.style.cursor = 'zoom-in';
+        img.addEventListener('click', () => openLightbox(img.src, img.alt));
     });
 })();
 </script>
@@ -1047,6 +1084,192 @@ def generate_html_report(findings: list[dict], sys_info: dict,
     .fp-stats, .high-confidence { padding: 24px 28px; }
     .verdict-sub { margin: -4px 0 18px; }
     .overview .big-verdict { font-size: 32px; margin: 18px 0 10px; }
+
+    /* ================================================================
+       === 10/10 PASS: design tokens, typography, animations, lightbox
+       ================================================================ */
+
+    :root {
+        /* Spacing scale (4-8-12-16-24-32-48-64) */
+        --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px;
+        --s-6: 24px; --s-8: 32px; --s-12: 48px; --s-16: 64px;
+
+        /* Color tokens */
+        --c-red: #ff4d4f;
+        --c-red-soft: rgba(255, 77, 79, 0.08);
+        --c-orange: #ffb020;
+        --c-orange-soft: rgba(255, 176, 32, 0.07);
+        --c-yellow: #ffe066;
+        --c-green: #3fbf7f;
+        --c-green-soft: rgba(63, 191, 127, 0.08);
+
+        /* Neutral scale */
+        --c-bg-0: #08080a;
+        --c-bg-1: #0e0e10;
+        --c-bg-2: #16161a;
+        --c-bg-3: #1a1a1d;
+        --c-bg-4: #232327;
+        --c-border: #1f1f23;
+        --c-border-soft: #15151a;
+
+        /* Text scale */
+        --c-text: #f0f0f2;
+        --c-text-mute: #aaa;
+        --c-text-soft: #777;
+        --c-text-faint: #555;
+
+        /* Motion */
+        --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+        --ease: cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Typography upgrade — Segoe UI Variable (Win11) cai bonito */
+    body, .nav-link, .sidebar-head h3, .page-header h1, button, input {
+        font-family: 'Inter', 'Segoe UI Variable', -apple-system,
+                     BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+        font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
+    }
+    code, .conf-val, pre {
+        font-family: 'JetBrains Mono', 'Cascadia Code', 'Consolas',
+                     'SF Mono', monospace;
+        font-feature-settings: "calt", "liga", "ss01", "ss02";
+    }
+    body { color: var(--c-text); letter-spacing: -0.005em; }
+    h1, h2, h3 { letter-spacing: -0.015em; font-weight: 700; }
+
+    /* === Animations === */
+    @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(8px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(255, 77, 79, 0.5); }
+        50%      { box-shadow: 0 0 0 14px rgba(255, 77, 79, 0); }
+    }
+    @keyframes shimmer {
+        0%   { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+    }
+    @keyframes scaleIn {
+        from { opacity: 0; transform: scale(0.96); }
+        to   { opacity: 1; transform: scale(1); }
+    }
+
+    /* Apply stagger to cards */
+    .card {
+        animation: fadeUp 0.5s var(--ease-out) both;
+        transition: border-color 0.2s var(--ease), transform 0.15s var(--ease);
+    }
+    .card:nth-child(1) { animation-delay: 0ms; }
+    .card:nth-child(2) { animation-delay: 40ms; }
+    .card:nth-child(3) { animation-delay: 80ms; }
+    .card:nth-child(4) { animation-delay: 120ms; }
+    .card:nth-child(5) { animation-delay: 160ms; }
+    .card:nth-child(6) { animation-delay: 200ms; }
+    .card:nth-child(7) { animation-delay: 240ms; }
+    .card:nth-child(n+8) { animation-delay: 280ms; }
+    .sidebar { animation: fadeUp 0.4s var(--ease-out) both; }
+    .page-header h1 {
+        background-size: 200% 100%;
+        animation: shimmer 8s linear infinite;
+    }
+
+    /* Big verdict pulse for CHEATER */
+    .big-verdict {
+        animation: scaleIn 0.6s var(--ease-out) both;
+        text-shadow: 0 0 24px currentColor;
+    }
+
+    /* === Hovers refined === */
+    .card:hover {
+        transform: translateY(-1px);
+        border-color: var(--c-border);
+    }
+    .stat {
+        transition: transform 0.15s var(--ease), background 0.15s var(--ease);
+    }
+    .stat:hover {
+        transform: translateY(-2px);
+        background: var(--c-bg-3) !important;
+    }
+    code {
+        transition: background 0.15s var(--ease), color 0.15s var(--ease);
+    }
+    code:hover { background: var(--c-bg-4); color: #ffd680; }
+
+    /* === Better neutrals on existing components === */
+    body { background: var(--c-bg-1); }
+    .sidebar { background: var(--c-bg-0); border-color: var(--c-border); }
+    .card { background: var(--c-bg-3); border-color: var(--c-border); }
+    .chart-card, .stat, code { background: var(--c-bg-1); }
+    .stat { border-color: var(--c-border); }
+    th { background: var(--c-bg-4); color: var(--c-text-mute); }
+    .controls input { background: var(--c-bg-1); border-color: var(--c-border); }
+
+    /* === Lightbox for screenshots === */
+    .lightbox {
+        position: fixed; inset: 0; z-index: 1000;
+        background: rgba(0, 0, 0, 0.92);
+        backdrop-filter: blur(8px);
+        display: none; align-items: center; justify-content: center;
+        padding: 32px;
+        animation: scaleIn 0.2s var(--ease-out);
+        cursor: zoom-out;
+    }
+    .lightbox.active { display: flex; }
+    .lightbox img {
+        max-width: 100%; max-height: 100%;
+        object-fit: contain;
+        border-radius: 8px;
+        box-shadow: 0 24px 72px rgba(0, 0, 0, 0.6);
+        cursor: default;
+    }
+    .lightbox-close {
+        position: absolute; top: 24px; right: 24px;
+        background: rgba(255, 255, 255, 0.1); color: #fff;
+        border: none; width: 40px; height: 40px;
+        border-radius: 50%; cursor: pointer;
+        font-size: 20px;
+        transition: background 0.15s;
+    }
+    .lightbox-close:hover { background: rgba(255, 255, 255, 0.2); }
+    .lightbox-hint {
+        position: absolute; bottom: 24px;
+        color: var(--c-text-soft); font-size: 12px;
+        letter-spacing: 1px;
+    }
+
+    /* Toast for copy feedback */
+    .toast {
+        position: fixed; bottom: 24px; right: 24px; z-index: 999;
+        background: var(--c-green); color: #000;
+        padding: 12px 20px; border-radius: 8px;
+        font-weight: 600; font-size: 13px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        animation: fadeUp 0.3s var(--ease-out);
+    }
+
+    /* Focus visible (a11y) */
+    *:focus-visible {
+        outline: 2px solid var(--c-red);
+        outline-offset: 2px;
+        border-radius: 4px;
+    }
+    *:focus:not(:focus-visible) { outline: none; }
+
+    /* Selection */
+    ::selection { background: var(--c-red); color: #000; }
+
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+            animation-duration: 0.01ms !important;
+            transition-duration: 0.01ms !important;
+        }
+    }
     """
 
     html_doc = f"""<!DOCTYPE html>
