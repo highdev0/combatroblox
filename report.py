@@ -782,58 +782,7 @@ CONTROLS_JS = """
         observer.observe(card);
     });
 
-    // === Ripple effect on click pros buttons (exceto lightbox close) ===
-    document.querySelectorAll('.filter-btn, #show-all').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            const ripple = document.createElement('span');
-            const rect = this.getBoundingClientRect();
-            const size = Math.max(rect.width, rect.height);
-            ripple.style.cssText = `
-                position: absolute;
-                left: ${e.clientX - rect.left - size/2}px;
-                top: ${e.clientY - rect.top - size/2}px;
-                width: ${size}px; height: ${size}px;
-                border-radius: 50%;
-                background: rgba(0,0,0,0.25);
-                pointer-events: none;
-                animation: rippleExpand 0.6s ease-out;
-            `;
-            // Garante position relative computed
-            const computed = getComputedStyle(this).position;
-            if (computed === 'static') this.style.position = 'relative';
-            this.style.overflow = 'hidden';
-            this.appendChild(ripple);
-            setTimeout(() => ripple.remove(), 600);
-        });
-    });
-
-    // Add ripple keyframe at runtime
-    const style = document.createElement('style');
-    style.textContent = `@keyframes rippleExpand {
-        from { transform: scale(0); opacity: 1; }
-        to   { transform: scale(2.5); opacity: 0; }
-    }`;
-    document.head.appendChild(style);
-
-    // === Verdict big text — efeito de magnet hover (após anim de entrada) ===
-    const verdict = document.querySelector('.big-verdict');
-    if (verdict) {
-        let magnetReady = false;
-        setTimeout(() => { magnetReady = true; }, 1000);  // espera verdictReveal
-        verdict.addEventListener('mousemove', (e) => {
-            if (!magnetReady) return;
-            const rect = verdict.getBoundingClientRect();
-            const x = (e.clientX - rect.left - rect.width / 2) / 30;
-            const y = (e.clientY - rect.top - rect.height / 2) / 30;
-            verdict.style.transform = `translate(${x}px, ${y}px)`;
-        });
-        verdict.addEventListener('mouseleave', () => {
-            if (!magnetReady) return;
-            verdict.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
-            verdict.style.transform = 'translate(0, 0)';
-            setTimeout(() => { verdict.style.transition = ''; }, 400);
-        });
-    }
+    // Ripple e magnet hover removidos — viravam ruído visual.
 })();
 </script>
 """
@@ -1389,402 +1338,255 @@ def generate_html_report(findings: list[dict], sys_info: dict,
         }
     }
 
-    /* Brand logo */
+    /* Brand */
     .brand-row {
-        display: flex; align-items: center; gap: 12px;
+        display: flex; align-items: center; gap: 10px;
         margin-bottom: 14px;
     }
     .brand-logo {
-        width: 40px; height: 40px; flex-shrink: 0;
-        filter: drop-shadow(0 2px 8px rgba(255, 77, 79, 0.4));
-        animation: scaleIn 0.5s var(--ease-out) both, logoFloat 6s ease-in-out infinite;
-        transition: transform 0.3s var(--ease-out);
-    }
-    .brand-row:hover .brand-logo {
-        transform: rotate(-8deg) scale(1.1);
-        filter: drop-shadow(0 4px 16px rgba(255, 77, 79, 0.7));
+        width: 32px; height: 32px; flex-shrink: 0;
+        opacity: 0.95;
     }
     .brand-row h3 { margin: 0; line-height: 1; }
 
     /* ================================================================
-       === PREMIUM ANIMATION PASS — make it feel alive
+       === Calm pass — quieter, more deliberate
        ================================================================ */
 
-    @keyframes logoFloat {
-        0%, 100% { transform: translateY(0); }
-        50%      { transform: translateY(-3px); }
+    color-scheme: dark;
+
+    :root {
+        accent-color: var(--c-red);
     }
-    @keyframes slideRight {
-        from { opacity: 0; transform: translateX(-20px); }
-        to   { opacity: 1; transform: translateX(0); }
+
+    /* Tabular figures + slashed zero — números alinhados verticalmente,
+       sem confundir 0/O. Diferença sutil mas notável em stats grandes. */
+    .stat .num, .conf-val, .hc-count, code, time,
+    .verdict-sub, .donut text, .bar-count,
+    .stats, .verdict-sub code {
+        font-variant-numeric: tabular-nums lining-nums slashed-zero;
     }
-    @keyframes slideLeft {
-        from { opacity: 0; transform: translateX(20px); }
-        to   { opacity: 1; transform: translateX(0); }
+
+    /* Headings — peso mais variado, tracking refinado */
+    h1, h2, h3 {
+        font-weight: 600;
+        letter-spacing: -0.011em;
+        text-wrap: balance;
     }
-    @keyframes glowPulse {
-        0%, 100% { box-shadow: 0 0 0 0 rgba(255, 77, 79, 0); }
-        50%      { box-shadow: 0 0 0 12px rgba(255, 77, 79, 0.15); }
+    .page-header h1 {
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: var(--c-text);
+        background: none;
+        -webkit-text-fill-color: var(--c-text);
+        margin: 0;
     }
-    @keyframes drawCircle {
-        from { stroke-dashoffset: 314; }
-        to   { stroke-dashoffset: var(--final-offset, 0); }
+    .page-header h1::first-letter {
+        color: var(--c-red);
+    }
+
+    /* Animations mínimas — só de entrada, sem loops infinitos */
+    @keyframes drift {
+        from { opacity: 0; transform: translateY(6px); }
+        to   { opacity: 1; transform: translateY(0); }
     }
     @keyframes barGrow {
         from { width: 0; }
         to   { width: var(--final-width, 100%); }
     }
-    @keyframes countUp {
-        from { opacity: 0; transform: translateY(8px); }
-        to   { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes gradientShift {
-        0%   { background-position: 0% 50%; }
-        50%  { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-    }
-    @keyframes sweep {
-        0%   { left: -100%; }
-        100% { left: 100%; }
-    }
-    @keyframes statPop {
-        0%   { transform: scale(0.8); opacity: 0; }
-        50%  { transform: scale(1.05); }
-        100% { transform: scale(1); opacity: 1; }
-    }
-    @keyframes verdictReveal {
-        0%   { opacity: 0; transform: scale(0.7) rotateX(-30deg); filter: blur(4px); }
-        60%  { transform: scale(1.05) rotateX(0); filter: blur(0); }
-        100% { opacity: 1; transform: scale(1) rotateX(0); }
-    }
-    @keyframes shimmerBar {
-        0%   { background-position: -1000px 0; }
-        100% { background-position: 1000px 0; }
-    }
-    @keyframes hoverFloat {
-        0%, 100% { transform: translateY(0); }
-        50%      { transform: translateY(-4px); }
+    @keyframes donutDraw {
+        from { stroke-dashoffset: 314; }
     }
 
-    /* === Sidebar slide-in === */
-    .sidebar {
-        animation: slideRight 0.5s var(--ease-out) both;
-    }
-    .sidebar-head { animation: countUp 0.6s 0.1s var(--ease-out) both; }
-    .nav-group { animation: countUp 0.5s var(--ease-out) both; }
-    .nav-group:nth-child(1) { animation-delay: 0.2s; }
-    .nav-group:nth-child(2) { animation-delay: 0.3s; }
-    .nav-link {
-        position: relative; overflow: hidden;
-    }
-    .nav-link::after {
-        content: ''; position: absolute; top: 0; left: -100%;
-        width: 50%; height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255, 77, 79, 0.08), transparent);
-        transition: left 0.5s var(--ease-out);
-    }
-    .nav-link:hover::after { left: 200%; }
-    .nav-link.nav-hit .nav-badge {
-        animation: glowPulse 2.5s ease-in-out infinite;
-    }
-
-    /* === Score badge breath === */
-    .nav-score {
-        animation: scaleIn 0.6s 0.4s var(--ease-out) both, glowPulse 3s 1s ease-in-out infinite;
-    }
-
-    /* === Stats premium animation === */
-    .stat {
-        animation: statPop 0.5s var(--ease-out) both;
-        position: relative; overflow: hidden;
-    }
-    .stat:nth-child(1) { animation-delay: 50ms; }
-    .stat:nth-child(2) { animation-delay: 100ms; }
-    .stat:nth-child(3) { animation-delay: 150ms; }
-    .stat:nth-child(4) { animation-delay: 200ms; }
-    .stat:nth-child(5) { animation-delay: 250ms; }
-    .stat:nth-child(6) { animation-delay: 300ms; }
-    .stat::before {
-        content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
-        background: linear-gradient(90deg, transparent,
-                    rgba(255, 255, 255, 0.04), transparent);
-        transition: left 0.7s var(--ease-out);
-    }
-    .stat:hover::before { left: 100%; }
-    /* .stat .num: número animado via JS (counter de 0->target).
-       Evita conflito tirando animation CSS. */
-
-    /* === Verdict 3D reveal === */
-    .big-verdict {
-        animation: verdictReveal 0.9s var(--ease-out) both;
-        perspective: 600px;
-        position: relative;
-    }
-    .big-verdict::after {
-        content: ''; position: absolute; inset: -8px;
-        background: radial-gradient(circle at center, currentColor 0%, transparent 60%);
-        opacity: 0.15; z-index: -1;
-        filter: blur(20px);
-    }
-
-    /* === Cards premium === */
+    /* Cards — sem hover lift, sem ring, sem gradient. Só border-color shift. */
     .card {
-        position: relative; overflow: hidden;
-        transition: transform 0.25s var(--ease-out),
-                    border-color 0.25s var(--ease),
-                    box-shadow 0.25s var(--ease);
-        will-change: transform;
-    }
-    .card::before {
-        content: ''; position: absolute; top: 0; left: 0;
-        width: 100%; height: 1px;
-        background: linear-gradient(90deg, transparent,
-                    rgba(255, 77, 79, 0.4), transparent);
-        opacity: 0; transition: opacity 0.3s;
+        position: relative;
+        animation: drift 0.45s var(--ease-out) both;
+        transition: border-color 0.2s var(--ease);
     }
     .card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3),
-                    0 0 0 1px rgba(255, 77, 79, 0.15);
+        border-color: var(--c-bg-4);
     }
-    .card:hover::before { opacity: 1; }
     .card.status-suspicious {
-        border-color: rgba(255, 77, 79, 0.25);
+        border-color: rgba(255, 77, 79, 0.18);
     }
     .card.status-suspicious::after {
-        content: ''; position: absolute; top: 0; right: 0;
-        width: 4px; height: 100%;
-        background: linear-gradient(180deg, var(--c-red), var(--c-orange));
-        opacity: 0.8;
+        content: ''; position: absolute; top: 16px; bottom: 16px; left: 0;
+        width: 2px;
+        background: var(--c-red);
+        border-radius: 0 1px 1px 0;
     }
 
-    /* === Bars animadas === */
-    .bar-fill {
-        background: linear-gradient(90deg, var(--c-red), var(--c-orange), var(--c-yellow));
-        background-size: 200% 100%;
-        animation: barGrow 1.2s 0.3s var(--ease-out) both,
-                   gradientShift 4s ease-in-out infinite;
-        position: relative; overflow: hidden;
-        will-change: width, background-position;
-    }
-    .bar-fill::after {
-        content: ''; position: absolute; top: 0; left: 0;
-        width: 100%; height: 100%;
-        background: linear-gradient(90deg, transparent,
-                    rgba(255, 255, 255, 0.2), transparent);
-        background-size: 200% 100%;
-        animation: shimmerBar 3s infinite;
-        pointer-events: none;
-    }
-
-    /* === Donut chart drawing animation === */
-    .donut circle:not(:first-child) {
-        transform-origin: center;
-        animation: donutFadeIn 0.8s 0.4s var(--ease-out) both;
-    }
-    /* SVG text: usar opacity-only (translate quebra layout em <text>) */
-    .donut text {
-        opacity: 0;
-        animation: opacityIn 0.5s 1.1s var(--ease-out) forwards;
-    }
-    @keyframes opacityIn { to { opacity: 1; } }
-    @keyframes donutFadeIn {
-        from { opacity: 0; transform: scale(0.9); }
-        to   { opacity: 1; transform: scale(1); }
-    }
-
-    /* === Timeline dots pop in === */
-    .timeline .tl-dot {
-        animation: statPop 0.4s var(--ease-out) both;
-        transition: transform 0.2s var(--ease-out), box-shadow 0.2s;
-    }
-    .timeline .tl-dot:nth-child(1)  { animation-delay: 0ms;   }
-    .timeline .tl-dot:nth-child(2)  { animation-delay: 40ms;  }
-    .timeline .tl-dot:nth-child(3)  { animation-delay: 80ms;  }
-    .timeline .tl-dot:nth-child(4)  { animation-delay: 120ms; }
-    .timeline .tl-dot:nth-child(5)  { animation-delay: 160ms; }
-    .timeline .tl-dot:nth-child(n+6){ animation-delay: 200ms; }
-    .timeline .tl-dot:hover {
-        transform: translate(-50%, -50%) scale(2.5);
-        z-index: 50;
-        box-shadow: 0 0 24px currentColor;
-    }
-
-    /* === Empty state celebration === */
-    .empty-state .empty-icon {
-        animation: scaleIn 0.8s var(--ease-out) both,
-                   hoverFloat 3s 1s ease-in-out infinite;
-        display: inline-block;
-    }
-    .empty-state h2 {
-        animation: countUp 0.6s 0.2s var(--ease-out) both;
-    }
-    .empty-state p {
-        animation: countUp 0.6s 0.4s var(--ease-out) both;
-    }
-
-    /* === Header gradient sweep === */
-    .page-header h1 {
-        background: linear-gradient(90deg,
-            #ff4d4f 0%, #ff7a3f 25%, #ffb020 50%,
-            #ff7a3f 75%, #ff4d4f 100%);
-        background-size: 300% 100%;
-        -webkit-background-clip: text; background-clip: text;
-        color: transparent;
-        animation: gradientShift 6s ease-in-out infinite,
-                   countUp 0.7s var(--ease-out) both;
-    }
-
-    /* === Charts entry === */
-    .chart-card {
-        animation: scaleIn 0.6s var(--ease-out) both;
-        transition: transform 0.3s var(--ease-out),
-                    box-shadow 0.3s;
+    /* Sidebar — entrada simples, sem stagger */
+    .sidebar { animation: drift 0.4s var(--ease-out) both; }
+    .nav-link {
         position: relative;
+        transition: background 0.12s var(--ease), color 0.12s, border-left-color 0.12s;
     }
-    .chart-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 16px 32px rgba(0, 0, 0, 0.25);
+    .nav-link:hover {
+        background: rgba(255, 255, 255, 0.025);
     }
-    .chart-card:nth-child(1) { animation-delay: 0.1s; }
-    .chart-card:nth-child(2) { animation-delay: 0.2s; }
+    .nav-badge {
+        font-variant-numeric: tabular-nums;
+    }
+    .nav-score {
+        font-variant-numeric: tabular-nums;
+        font-weight: 700;
+    }
 
-    /* === Filter buttons === */
+    /* Stats — pop simples, sem shimmer overlay */
+    .stat { animation: drift 0.4s var(--ease-out) both; }
+    .stat:nth-child(1) { animation-delay: 30ms; }
+    .stat:nth-child(2) { animation-delay: 60ms; }
+    .stat:nth-child(3) { animation-delay: 90ms; }
+    .stat:nth-child(4) { animation-delay: 120ms; }
+    .stat:nth-child(5) { animation-delay: 150ms; }
+    .stat:nth-child(6) { animation-delay: 180ms; }
+    .stat:hover {
+        background: var(--c-bg-2) !important;
+        transform: none;
+    }
+    .stat .num {
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        font-feature-settings: "tnum", "lnum", "zero";
+    }
+
+    /* Verdict — sem 3D, sem halo, sem magnet. Só uma entrada limpa. */
+    .big-verdict {
+        animation: drift 0.5s var(--ease-out) both;
+        font-weight: 700;
+        letter-spacing: -0.025em;
+    }
+
+    /* Bars — cor sólida quente, anima 1x */
+    .bar-fill {
+        background: var(--c-red);
+        animation: barGrow 1s 0.2s var(--ease-out) both;
+        will-change: width;
+    }
+    .bar-row .bar-count {
+        font-weight: 600;
+        color: var(--c-text-mute);
+    }
+
+    /* Donut — fade + draw 1x, sem loops */
+    .donut circle:not(:first-child) {
+        stroke-dasharray: 314;
+        animation: donutDraw 0.9s 0.3s var(--ease-out) both;
+        animation-fill-mode: backwards;
+    }
+
+    /* Timeline dots — apenas hover scale, sem pop entry confuso */
+    .timeline .tl-dot {
+        transition: transform 0.15s var(--ease), box-shadow 0.15s;
+    }
+    .timeline .tl-dot:hover {
+        transform: translate(-50%, -50%) scale(1.6);
+        box-shadow: 0 0 12px currentColor;
+        z-index: 50;
+    }
+
+    /* Empty state — sem float infinito */
+    .empty-state .empty-icon { display: inline-block; opacity: 0.9; }
+
+    /* Charts — entry simples */
+    .chart-card { animation: drift 0.5s var(--ease-out) both; }
+    .chart-card:nth-child(2) { animation-delay: 80ms; }
+    .chart-card:hover { border-color: var(--c-bg-4); }
+
+    /* Filter buttons — sem ::before sweep, hover só com opacity */
     .filter-btn {
-        position: relative; overflow: hidden;
-        transition: transform 0.15s var(--ease-out),
-                    box-shadow 0.15s, opacity 0.15s;
+        transition: opacity 0.12s, background 0.12s;
     }
-    .filter-btn::before {
-        content: ''; position: absolute; inset: 0;
-        background: rgba(255, 255, 255, 0.15);
-        opacity: 0; transition: opacity 0.15s;
-    }
-    .filter-btn:hover {
-        transform: translateY(-1px) scale(1.02);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    }
-    .filter-btn:hover::before { opacity: 1; }
-    .filter-btn:active { transform: translateY(0) scale(0.98); }
+    .filter-btn:hover { opacity: 0.85; }
+    .filter-btn:active { transform: scale(0.97); }
 
-    /* === Search input glow on focus === */
+    /* Search input focus — só border, sem ring */
     .controls input {
-        transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+        transition: border-color 0.15s, background 0.15s;
     }
     .controls input:focus {
-        border-color: var(--c-red);
-        box-shadow: 0 0 0 4px rgba(255, 77, 79, 0.15);
+        border-color: var(--c-text-mute);
         background: var(--c-bg-2);
     }
 
-    /* === Severity row hover === */
-    tbody tr {
-        transition: background 0.2s var(--ease-out);
-    }
-    tbody tr:hover {
-        background: rgba(255, 77, 79, 0.05);
-    }
-    tbody tr.row-high:hover {
-        background: rgba(255, 77, 79, 0.12);
-    }
+    /* Rows */
+    tbody tr { transition: background 0.12s; }
+    tbody tr:hover { background: rgba(255, 255, 255, 0.02); }
+    tbody tr.row-high:hover { background: rgba(255, 77, 79, 0.06); }
 
-    /* === Sev dot pulse for HIGH === */
-    .row-high .sev-dot {
-        animation: glowPulse 2s ease-in-out infinite;
-    }
-
-    /* === Code copy ripple === */
+    /* Code — sem ripple, hover só com bg shift */
     code {
-        position: relative; overflow: hidden;
-        transition: background 0.15s, color 0.15s, transform 0.15s;
-    }
-    code:active { transform: scale(0.97); }
-
-    /* === Lightbox more dramatic === */
-    .lightbox {
-        animation: scaleIn 0.25s var(--ease-out);
-    }
-    .lightbox img {
-        animation: verdictReveal 0.4s 0.05s var(--ease-out) both;
-        transition: transform 0.3s var(--ease-out);
-    }
-    .lightbox img:hover {
-        transform: scale(1.02);
-    }
-    .lightbox-close {
-        transition: background 0.2s, transform 0.2s;
-    }
-    .lightbox-close:hover {
-        background: var(--c-red) !important;
-        color: #000 !important;
-        transform: rotate(90deg) scale(1.1);
+        transition: background 0.12s, color 0.12s;
     }
 
-    /* === Toast premium === */
-    .toast {
-        animation: scaleIn 0.3s var(--ease-out) both;
-        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5),
-                    0 0 0 1px rgba(63, 191, 127, 0.4);
-        backdrop-filter: blur(8px);
-    }
-
-    /* === Sidebar nav stagger === */
-    .nav-link {
-        animation: slideRight 0.35s var(--ease-out) both;
-    }
-    .nav-link:nth-child(1)  { animation-delay: 0.25s; }
-    .nav-link:nth-child(2)  { animation-delay: 0.28s; }
-    .nav-link:nth-child(3)  { animation-delay: 0.31s; }
-    .nav-link:nth-child(4)  { animation-delay: 0.34s; }
-    .nav-link:nth-child(5)  { animation-delay: 0.37s; }
-    .nav-link:nth-child(6)  { animation-delay: 0.40s; }
-    .nav-link:nth-child(7)  { animation-delay: 0.43s; }
-    .nav-link:nth-child(8)  { animation-delay: 0.46s; }
-    .nav-link:nth-child(9)  { animation-delay: 0.49s; }
-    .nav-link:nth-child(n+10) { animation-delay: 0.52s; }
-
-    /* === Smooth scroll === */
-    html { scroll-behavior: smooth; }
-
-    /* === Better borders w/ gradient on hover === */
+    /* High-confidence card — borda vermelha sólida, sem gradient animado */
     .high-confidence {
-        position: relative;
-    }
-    .high-confidence::before {
-        content: ''; position: absolute; inset: 0;
-        border-radius: 10px;
-        padding: 2px;
-        background: linear-gradient(135deg, var(--c-red), var(--c-orange));
-        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-        mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-        -webkit-mask-composite: xor; mask-composite: exclude;
-        pointer-events: none;
-        animation: gradientShift 4s ease-in-out infinite;
+        border-color: rgba(255, 77, 79, 0.5);
     }
 
-    /* === Details summary smooth === */
+    /* Details summary — só rotate do triângulo, sem slide do título */
     details > summary::before {
-        transition: transform 0.25s var(--ease-out), color 0.2s;
-    }
-    details[open] > summary::before {
-        color: var(--c-red);
+        transition: transform 0.2s var(--ease);
     }
     details summary h2 {
-        transition: color 0.2s, transform 0.2s var(--ease-out);
+        transition: color 0.15s;
     }
-    details summary:hover h2 {
-        transform: translateX(2px);
-        color: var(--c-orange);
+    details summary:hover h2 { color: var(--c-text); }
+
+    /* FP badge */
+    .fp-badge {
+        cursor: help;
+        font-weight: 500;
+        letter-spacing: 0;
     }
 
-    /* === FP badge bounce === */
-    .fp-badge {
-        animation: statPop 0.4s var(--ease-out) both;
-        animation-delay: 0.6s;
-        cursor: help;
-        transition: transform 0.15s;
+    /* Lightbox close — sem rotate gimmick */
+    .lightbox-close {
+        transition: background 0.15s;
     }
-    .fp-badge:hover { transform: scale(1.1); }
+    .lightbox-close:hover { background: rgba(255, 255, 255, 0.18); }
+
+    /* Toast — sombra discreta */
+    .toast {
+        animation: drift 0.25s var(--ease-out) both;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Smooth scroll — só se user não preferir reduzido */
+    @media (prefers-reduced-motion: no-preference) {
+        html { scroll-behavior: smooth; }
+    }
+
+    /* Selection refinada */
+    ::selection {
+        background: rgba(255, 77, 79, 0.25);
+        color: var(--c-text);
+    }
+
+    /* Borders mais consistentes em tudo */
+    .card, .chart-card, .stat, .controls input {
+        border-color: var(--c-border);
+    }
+
+    /* Spacing scale aplicada onde tava off */
+    .stats { gap: 8px; }
+    .chart-card { padding: 24px; }
+    .nav-group { margin-bottom: 28px; }
+    .nav-link { padding: 8px 24px; }
+
+    /* Detalhes tipográficos finais */
+    .desc { color: var(--c-text-mute); line-height: 1.6; }
+    .summary { color: var(--c-text); font-weight: 500; }
+    code {
+        background: var(--c-bg-1);
+        border: 1px solid var(--c-border);
+        color: #ffc266;
+        padding: 1px 6px;
+        font-size: 12px;
+        border-radius: 4px;
+    }
     """
 
     html_doc = f"""<!DOCTYPE html>
