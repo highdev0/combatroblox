@@ -864,7 +864,20 @@ def generate_html_report(findings: list[dict], sys_info: dict,
         flex: 1; padding: 24px; max-width: calc(100% - 260px);
         scroll-padding-top: 20px;
     }
-    .main-content > header { text-align: left; margin-bottom: 24px; }
+    .page-header {
+        margin-bottom: 24px; padding-bottom: 16px;
+        border-bottom: 1px solid #1f1f23;
+    }
+    .page-header h1 {
+        margin: 0; font-size: 32px; font-weight: 800; letter-spacing: 3px;
+        background: linear-gradient(90deg, #ff4d4f 0%, #ffb020 50%, #ff4d4f 100%);
+        -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .page-header .sub { color: #666; margin-top: 4px; font-size: 13px; }
+    .page-footer {
+        margin-top: 32px; padding: 20px; border-top: 1px solid #1f1f23;
+        color: #555; font-size: 12px; text-align: center;
+    }
 
     /* === Collapsible sections === */
     details > summary {
@@ -962,12 +975,12 @@ def generate_html_report(findings: list[dict], sys_info: dict,
     <style>{CSS}{extra_css}</style>
 </head>
 <body>
-    <header>
+    {sidebar_html}
+    <main class="main-content">
+    <header class="page-header">
         <h1>TELADOR BR</h1>
         <div class="sub">Relatório gerado em {sys_info.get('scan_time', '')}</div>
     </header>
-    {sidebar_html}
-    <main class="main-content">
     <span id="summary"></span>{summary_html}
     {empty_html}
     <span id="high-confidence"></span>{hc_html}
@@ -980,12 +993,12 @@ def generate_html_report(findings: list[dict], sys_info: dict,
     {controls_html}
     {sections}
     {exe_hash}
-    </main>
-    <footer>
+    <footer class="page-footer">
         Resultado é heurístico (baseado em nomes/locais conhecidos).
         Pode haver falso positivo (ex.: alguém pesquisou sobre o tema) ou falso negativo (cheat com nome trocado).
         Conduza a tela completa e verifique manualmente os pontos suspeitos.
     </footer>
+    </main>
     {CONTROLS_JS}
 </body>
 </html>
