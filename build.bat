@@ -70,6 +70,8 @@ python -m PyInstaller ^
     --hidden-import diff_tool ^
     --hidden-import redaction ^
     --hidden-import report_md ^
+    --hidden-import discord_cache ^
+    --hidden-import network_scanners ^
     --hidden-import hashlib ^
     --hidden-import hmac ^
     --collect-submodules psutil ^

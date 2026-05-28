@@ -2,6 +2,37 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.5.0] - 2026-05-28
+
+Network forensics + Discord cache + brand identity.
+
+### Added
+
+#### 🌐 Network scanners (`network_scanners.py`)
+- `scan_network_connections` — TCP/UDP ativos com nome de processo,
+  flag se processo é executor conhecido (psutil).
+- `scan_dns_cache` — `ipconfig /displaydns` parsed, match contra
+  domínios suspeitos. Pega site visitado mesmo se browser history
+  foi limpo.
+- `scan_hosts_file` — detecta bloqueio de telemetria do Roblox
+  (`roblox.com`, `rbxcdn.com`, etc.) apontados pra `0.0.0.0`/
+  `127.0.0.1`. Red flag forte — cheaters fazem pra não enviar
+  telemetria de detecção.
+
+#### 💬 Discord cache (`discord_cache.py`)
+- `scan_discord_cache` — parseia cache binário de Discord/Canary/
+  PTB/Lightcord procurando URLs de sites de cheat. Pega DM
+  apagada com link de download.
+
+#### 🎨 Brand identity
+- Logo SVG oficial do Telador (escudo gradient + lupa) no sidebar
+  do relatório e no README.
+- Filter glow + animação scaleIn no logo.
+
+#### 📛 Badges adicionais no README
+- Downloads totais, último commit, CI status — todos `for-the-badge`
+  estilo Vercel/Linear.
+
 ## [3.4.0] - 2026-05-28
 
 UI redesign do relatório HTML — agora layout dashboard profissional.
