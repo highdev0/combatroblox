@@ -2,6 +2,39 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.2.2] - 2026-05-28
+
+False-positive precision pass — relatório de PC limpo agora dá LIMPO.
+
+### Fixed
+
+- **`RBXCRASH` removido dos padrões de log do Roblox.** Crash genérico
+  do client pode ser driver/OOM/hardware. Só Hyperion/AntiTamper/
+  DllInjection/ProcessUntrusted continuam como sinais.
+- **Defender exclusion de IDE/dev path não vira flag.** Adicionado
+  `DEFENDER_EXCLUSION_DEV_PATHS` cobrindo JetBrains/VS Code/Visual
+  Studio/Unity/Unreal/.git/node_modules/.venv/Steam/etc. JetBrains
+  literalmente documenta excluir. Não é red flag.
+- **`ExecutionPolicy Bypass` sozinho ≠ HIGH.** Agora precisa de
+  download keyword (`iex`/`irm`/`iwr`/`Invoke-WebRequest`/etc.) na
+  MESMA linha pra continuar HIGH. Sem download = MEDIUM. Devs/admins
+  rodam scripts com bypass o tempo todo.
+
+### Changed
+
+Verdict thresholds bumpados pra reduzir falsos suspeitos:
+
+| Verdict | Antes | Agora |
+|---|---|---|
+| CHEATER CONFIRMADO | score ≥ 40 | **score ≥ 50 E ≥ 3 fontes** |
+| ALTAMENTE SUSPEITO | score ≥ 20 | **score ≥ 25 E ≥ 2 fontes** |
+| SUSPEITO (REVISAR) | score ≥ 8 | **score ≥ 12 E ≥ 2 fontes** |
+| POSSÍVEIS PISTAS | score ≥ 2 | **score ≥ 4** |
+| LIMPO | < 2 | < 4 |
+
+Cross-correlation entre fontes agora também conta — 1 fonte só
+raramente é evidência de cheat sólida.
+
 ## [3.2.1] - 2026-05-27
 
 Security/privacy patch — protege dados sensíveis no relatório.

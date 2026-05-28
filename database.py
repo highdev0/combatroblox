@@ -558,6 +558,42 @@ ROBLOX_LOG_PATTERNS = [
     "ProcessUntrusted",
 ]
 
+# Paths que, se excluídos do Defender, são LEGÍTIMOS (não red flag).
+# IDEs/dev tools pedem exclusão por performance — JetBrains até documenta.
+DEFENDER_EXCLUSION_DEV_PATHS = [
+    r"\jetbrains\\", r"\pycharm", r"\rider", r"\webstorm", r"\intellij",
+    r"\clion", r"\datagrip", r"\goland", r"\rubymine", r"\phpstorm",
+    r"\android studio", r"\androidstudio",
+    r"\visual studio\\", r"\vs code\\", r"\vscode\\", r"\cursor\\",
+    r"\unity\\", r"\unrealengine", r"\unreal engine", r"\godot",
+    r"\.git\\", r"\node_modules\\", r"\.venv\\", r"\__pycache__\\",
+    r"\docker\\", r"\docker desktop\\",
+    r"\.cargo\\", r"\.rustup\\", r"\go\\", r"\.go\\",
+    r"\anaconda3", r"\miniconda", r"\python3", r"\python311", r"\python312",
+    r"\onedrive\\", r"\dropbox\\", r"\google drive\\",
+]
+
+# PowerShell keywords que precisam de CONTEXTO pra subir pra HIGH.
+# `ExecutionPolicy Bypass` sozinho não é cheat (admins/devs usam direto).
+# Só fica HIGH se vier junto de keyword de download na MESMA linha.
+PS_HIGH_REQUIRES_DOWNLOAD_CONTEXT = {
+    "executionpolicy bypass",
+    "set-executionpolicy unrestricted",
+    "set-executionpolicy bypass",
+    "-windowstyle hidden",
+    "-noninteractive",
+}
+
+# Keywords de download — se aparece junto, o contexto é malicioso
+PS_DOWNLOAD_KEYWORDS = (
+    "iex ", "iex(", "invoke-expression",
+    "irm ", "invoke-restmethod",
+    "iwr ", "invoke-webrequest",
+    "downloadstring", "downloadfile",
+    "bitsadmin /transfer", "start-bitstransfer",
+    "wget ", "curl ",
+)
+
 # ----------------------------- Anti-evasão -----------------------------
 
 VM_PROCESS_NAMES = {
