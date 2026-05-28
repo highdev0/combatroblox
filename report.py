@@ -782,8 +782,8 @@ CONTROLS_JS = """
         observer.observe(card);
     });
 
-    // === Ripple effect on click pros buttons ===
-    document.querySelectorAll('.filter-btn, button').forEach(btn => {
+    // === Ripple effect on click pros buttons (exceto lightbox close) ===
+    document.querySelectorAll('.filter-btn, #show-all').forEach(btn => {
         btn.addEventListener('click', function(e) {
             const ripple = document.createElement('span');
             const rect = this.getBoundingClientRect();
@@ -794,11 +794,13 @@ CONTROLS_JS = """
                 top: ${e.clientY - rect.top - size/2}px;
                 width: ${size}px; height: ${size}px;
                 border-radius: 50%;
-                background: rgba(255,255,255,0.3);
+                background: rgba(0,0,0,0.25);
                 pointer-events: none;
                 animation: rippleExpand 0.6s ease-out;
             `;
-            this.style.position = this.style.position || 'relative';
+            // Garante position relative computed
+            const computed = getComputedStyle(this).position;
+            if (computed === 'static') this.style.position = 'relative';
             this.style.overflow = 'hidden';
             this.appendChild(ripple);
             setTimeout(() => ripple.remove(), 600);
@@ -813,17 +815,23 @@ CONTROLS_JS = """
     }`;
     document.head.appendChild(style);
 
-    // === Verdict big text — efeito de magnet hover ===
+    // === Verdict big text — efeito de magnet hover (após anim de entrada) ===
     const verdict = document.querySelector('.big-verdict');
     if (verdict) {
+        let magnetReady = false;
+        setTimeout(() => { magnetReady = true; }, 1000);  // espera verdictReveal
         verdict.addEventListener('mousemove', (e) => {
+            if (!magnetReady) return;
             const rect = verdict.getBoundingClientRect();
             const x = (e.clientX - rect.left - rect.width / 2) / 30;
             const y = (e.clientY - rect.top - rect.height / 2) / 30;
             verdict.style.transform = `translate(${x}px, ${y}px)`;
         });
         verdict.addEventListener('mouseleave', () => {
-            verdict.style.transform = '';
+            if (!magnetReady) return;
+            verdict.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
+            verdict.style.transform = 'translate(0, 0)';
+            setTimeout(() => { verdict.style.transition = ''; }, 400);
         });
     }
 })();
@@ -1503,11 +1511,8 @@ def generate_html_report(findings: list[dict], sys_info: dict,
         transition: left 0.7s var(--ease-out);
     }
     .stat:hover::before { left: 100%; }
-    .stat .num {
-        animation: countUp 0.7s 0.3s var(--ease-out) both;
-        background: linear-gradient(135deg, currentColor, currentColor);
-        -webkit-background-clip: text; background-clip: text;
-    }
+    /* .stat .num: número animado via JS (counter de 0->target).
+       Evita conflito tirando animation CSS. */
 
     /* === Verdict 3D reveal === */
     .big-verdict {
@@ -1525,10 +1530,10 @@ def generate_html_report(findings: list[dict], sys_info: dict,
     /* === Cards premium === */
     .card {
         position: relative; overflow: hidden;
-        backdrop-filter: blur(10px);
         transition: transform 0.25s var(--ease-out),
                     border-color 0.25s var(--ease),
                     box-shadow 0.25s var(--ease);
+        will-change: transform;
     }
     .card::before {
         content: ''; position: absolute; top: 0; left: 0;
@@ -1555,39 +1560,50 @@ def generate_html_report(findings: list[dict], sys_info: dict,
 
     /* === Bars animadas === */
     .bar-fill {
-        animation: barGrow 1.2s 0.3s var(--ease-out) both;
         background: linear-gradient(90deg, var(--c-red), var(--c-orange), var(--c-yellow));
         background-size: 200% 100%;
         animation: barGrow 1.2s 0.3s var(--ease-out) both,
                    gradientShift 4s ease-in-out infinite;
         position: relative; overflow: hidden;
+        will-change: width, background-position;
     }
     .bar-fill::after {
         content: ''; position: absolute; top: 0; left: 0;
         width: 100%; height: 100%;
         background: linear-gradient(90deg, transparent,
-                    rgba(255, 255, 255, 0.3), transparent);
+                    rgba(255, 255, 255, 0.2), transparent);
         background-size: 200% 100%;
         animation: shimmerBar 3s infinite;
+        pointer-events: none;
     }
 
     /* === Donut chart drawing animation === */
     .donut circle:not(:first-child) {
-        stroke-dasharray: 0 314;
-        animation: drawCircle 1.5s 0.2s var(--ease-out) both;
         transform-origin: center;
+        animation: donutFadeIn 0.8s 0.4s var(--ease-out) both;
     }
+    /* SVG text: usar opacity-only (translate quebra layout em <text>) */
     .donut text {
-        animation: countUp 0.8s 1s var(--ease-out) both;
+        opacity: 0;
+        animation: opacityIn 0.5s 1.1s var(--ease-out) forwards;
+    }
+    @keyframes opacityIn { to { opacity: 1; } }
+    @keyframes donutFadeIn {
+        from { opacity: 0; transform: scale(0.9); }
+        to   { opacity: 1; transform: scale(1); }
     }
 
     /* === Timeline dots pop in === */
     .timeline .tl-dot {
-        animation: statPop 0.4s var(--ease-out) both,
-                   glowPulse 3s ease-in-out infinite;
+        animation: statPop 0.4s var(--ease-out) both;
         transition: transform 0.2s var(--ease-out), box-shadow 0.2s;
     }
-    .timeline .tl-dot:nth-child(odd)  { animation-delay: calc(var(--i, 0) * 30ms); }
+    .timeline .tl-dot:nth-child(1)  { animation-delay: 0ms;   }
+    .timeline .tl-dot:nth-child(2)  { animation-delay: 40ms;  }
+    .timeline .tl-dot:nth-child(3)  { animation-delay: 80ms;  }
+    .timeline .tl-dot:nth-child(4)  { animation-delay: 120ms; }
+    .timeline .tl-dot:nth-child(5)  { animation-delay: 160ms; }
+    .timeline .tl-dot:nth-child(n+6){ animation-delay: 200ms; }
     .timeline .tl-dot:hover {
         transform: translate(-50%, -50%) scale(2.5);
         z-index: 50;
@@ -1668,7 +1684,6 @@ def generate_html_report(findings: list[dict], sys_info: dict,
     tbody tr:hover {
         background: rgba(255, 77, 79, 0.05);
     }
-    tbody tr.row-high { animation: countUp 0.4s var(--ease-out) both; }
     tbody tr.row-high:hover {
         background: rgba(255, 77, 79, 0.12);
     }
