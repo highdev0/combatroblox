@@ -407,6 +407,27 @@ def _render_pe_section(findings: list) -> str:
     """
 
 
+LOGO_SVG = """
+<svg viewBox="0 0 64 64" class="brand-logo" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="brandGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#ff4d4f"/>
+            <stop offset="0.5" stop-color="#ff7a3f"/>
+            <stop offset="1" stop-color="#ffb020"/>
+        </linearGradient>
+        <filter id="glow"><feGaussianBlur stdDeviation="1.5"/></filter>
+    </defs>
+    <path d="M32 4 L56 14 L56 34 Q56 50 32 60 Q8 50 8 34 L8 14 Z"
+          fill="url(#brandGrad)" stroke="#0e0e10" stroke-width="0.5"/>
+    <circle cx="26" cy="28" r="9" fill="none" stroke="#0e0e10" stroke-width="3"/>
+    <line x1="33" y1="35" x2="42" y2="44" stroke="#0e0e10" stroke-width="3" stroke-linecap="round"/>
+    <text x="32" y="56" font-size="6" font-weight="800" fill="#0e0e10"
+          text-anchor="middle" font-family="Inter, system-ui, sans-serif"
+          letter-spacing="1.5">TELADOR</text>
+</svg>
+"""
+
+
 def _render_sidebar(findings: list, verdict: dict = None) -> str:
     """Sidebar sticky com TOC e contador por section."""
     links = [
@@ -442,7 +463,7 @@ def _render_sidebar(findings: list, verdict: dict = None) -> str:
     return f"""
     <aside class="sidebar">
         <div class="sidebar-head">
-            <h3>TELADOR BR</h3>
+            <div class="brand-row">{LOGO_SVG}<h3>TELADOR BR</h3></div>
             {score_badge}
         </div>
         <nav class="sidebar-nav">
@@ -1270,6 +1291,18 @@ def generate_html_report(findings: list[dict], sys_info: dict,
             transition-duration: 0.01ms !important;
         }
     }
+
+    /* Brand logo */
+    .brand-row {
+        display: flex; align-items: center; gap: 12px;
+        margin-bottom: 14px;
+    }
+    .brand-logo {
+        width: 40px; height: 40px; flex-shrink: 0;
+        filter: drop-shadow(0 2px 8px rgba(255, 77, 79, 0.4));
+        animation: scaleIn 0.5s var(--ease-out) both;
+    }
+    .brand-row h3 { margin: 0; line-height: 1; }
     """
 
     html_doc = f"""<!DOCTYPE html>

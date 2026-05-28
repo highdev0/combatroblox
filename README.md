@@ -1,10 +1,34 @@
+<div align="center">
+
+<svg width="120" height="120" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff4d4f"/>
+      <stop offset="0.5" stop-color="#ff7a3f"/>
+      <stop offset="1" stop-color="#ffb020"/>
+    </linearGradient>
+  </defs>
+  <path d="M32 4 L56 14 L56 34 Q56 50 32 60 Q8 50 8 34 L8 14 Z" fill="url(#g)"/>
+  <circle cx="26" cy="28" r="9" fill="none" stroke="#0e0e10" stroke-width="3"/>
+  <line x1="33" y1="35" x2="42" y2="44" stroke="#0e0e10" stroke-width="3" stroke-linecap="round"/>
+  <text x="32" y="56" font-size="6" font-weight="800" fill="#0e0e10" text-anchor="middle" letter-spacing="1.5">TELADOR</text>
+</svg>
+
 # Telador BR
 
-Ferramenta forense local para Windows que executa **34 scanners** em paralelo, procurando indícios de executores Roblox, ferramentas de cheating e padrões comportamentais suspeitos. 100% local, zero envio de dados.
+**Ferramenta forense local para SS em comunidades Roblox**
 
-[![Latest Release](https://img.shields.io/github/v/release/highdev0/combatroblox)](https://github.com/highdev0/combatroblox/releases/latest)
-[![CI](https://github.com/highdev0/combatroblox/actions/workflows/ci.yml/badge.svg)](https://github.com/highdev0/combatroblox/actions)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Latest Release](https://img.shields.io/github/v/release/highdev0/combatroblox?style=for-the-badge&color=ff4d4f)](https://github.com/highdev0/combatroblox/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/highdev0/combatroblox/total?style=for-the-badge&color=ffb020)](https://github.com/highdev0/combatroblox/releases)
+[![CI](https://img.shields.io/github/actions/workflow/status/highdev0/combatroblox/ci.yml?style=for-the-badge&label=CI)](https://github.com/highdev0/combatroblox/actions)
+[![License](https://img.shields.io/badge/License-MIT-3fbf7f?style=for-the-badge)](LICENSE)
+[![Last Commit](https://img.shields.io/github/last-commit/highdev0/combatroblox?style=for-the-badge&color=888)](https://github.com/highdev0/combatroblox/commits/main)
+
+**38 scanners** em paralelo · **542 assinaturas** de detecção · **100% local** · zero envio de dados
+
+</div>
+
+---
 
 ## Comece aqui (mais simples)
 
@@ -16,7 +40,7 @@ Pra distribuir pro usuário final: zipe `telador.exe` + `INICIAR.bat`, manda no 
 
 ## O que faz
 
-### 🔍 34 scanners em 7 categorias
+### 🔍 38 scanners em 9 categorias
 
 | Categoria | Cobertura |
 |---|---|
@@ -27,6 +51,7 @@ Pra distribuir pro usuário final: zipe `telador.exe` + `INICIAR.bat`, manda no 
 | **Roblox** | Logs do client, Bloxstrap, bytecode/autoexec dumps, scripts `.lua/.luau` |
 | **Live process** | DLL injection scan em `RobloxPlayerBeta.exe` (com `WinVerifyTrust`), process tree |
 | **Comportamento** | PowerShell history, RunMRU, TypedPaths, mouse macros (Logitech G HUB Lua, Razer, X-Mouse) |
+| **Network** | Conexões TCP/UDP ativas, DNS cache, hosts file (bloqueio de telemetria Roblox), **Discord cache** |
 | **Anti-evasão** | VM (VMware/VBox/Hyper-V/QEMU), Sandboxie, clock tampering |
 
 ### 🛡️ Filtro de falsos positivos

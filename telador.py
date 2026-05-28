@@ -37,6 +37,8 @@ import persistence
 import live_analysis
 import command_history
 import peripherals
+import discord_cache
+import network_scanners
 import capture
 import fp_filter
 import pe_analysis
@@ -87,7 +89,7 @@ BANNER = r"""
 
 def print_banner():
     print(f"{RED}{BANNER}{RESET}")
-    print(f"{GREY}  Versão 3.4.0  ·  UI redesign  ·  Sidebar  ·  Charts  ·  Collapsible{RESET}\n")
+    print(f"{GREY}  Versão 3.5.0  ·  38 scanners  ·  Network · DNS · Hosts · Discord cache{RESET}\n")
     self_hash = report_signing.get_self_hash()
     if self_hash:
         print(f"{GREY}  SHA256 deste exe: {self_hash[:16]}...{self_hash[-16:]}{RESET}")
@@ -139,6 +141,9 @@ def assemble_scanners(skip_forensics: bool, skip_antievasion: bool,
         chain.extend(antievasion.ALL_ANTIEVASION_SCANNERS)
     if not skip_forensics:
         chain.extend(forensics.ALL_FORENSIC_SCANNERS)
+    # Network + Discord — sempre incluídos no modo full
+    chain.extend(network_scanners.ALL_NETWORK_SCANNERS)
+    chain.extend(discord_cache.ALL_DISCORD_SCANNERS)
     return chain
 
 
