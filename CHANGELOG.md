@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.6.0] - 2026-05-28
+
+Detecção de PC formatado pra SS — clássica fuga de cheater experiente.
+
+### Added
+
+#### 🚨 Fresh install detector (`fresh_install.py`)
+
+`scan_fresh_install` combina **6 sinais** independentes pra detectar PC
+formatado/reinstalado pra apagar rastros antes da SS:
+
+1. **Windows InstallDate** do registry — granularidade de horas/dias:
+   - Hoje = HIGH
+   - 1-3 dias = HIGH
+   - 4-7 dias = MEDIUM
+   - 8-21 dias = LOW
+2. **Prefetch count** — < 10 = HIGH, < 30 = MEDIUM (normal 100-500)
+3. **UserAssist entries** — < 5 = HIGH, < 15 = MEDIUM (normal 50+)
+4. **C: volume creation time** via `fsutil fsinfo ntfsinfo` — confirma
+   formatação FÍSICA (não só Windows reset)
+5. **Gap Roblox → Windows** — Roblox instalado < 6h depois do Windows
+   = HIGH (sequência clássica formata→instala→cheata)
+6. **Pasta Recent vazia** — < 5 atalhos = formatação recente
+
+Cobertura: mesmo se formatou há 1-2 semanas, vários sinais ficam.
+Multi-sinal combinado eleva veredict drasticamente.
+
 ## [3.5.0] - 2026-05-28
 
 Network forensics + Discord cache + brand identity.
