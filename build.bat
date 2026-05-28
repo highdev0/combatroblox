@@ -72,6 +72,7 @@ python -m PyInstaller ^
     --hidden-import report_md ^
     --hidden-import discord_cache ^
     --hidden-import network_scanners ^
+    --hidden-import fresh_install ^
     --hidden-import hashlib ^
     --hidden-import hmac ^
     --collect-submodules psutil ^

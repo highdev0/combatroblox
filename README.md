@@ -24,7 +24,7 @@
 [![License](https://img.shields.io/badge/License-MIT-3fbf7f?style=for-the-badge)](LICENSE)
 [![Last Commit](https://img.shields.io/github/last-commit/highdev0/combatroblox?style=for-the-badge&color=888)](https://github.com/highdev0/combatroblox/commits/main)
 
-**38 scanners** em paralelo · **542 assinaturas** de detecção · **100% local** · zero envio de dados
+**39 scanners** em paralelo · **542 assinaturas** de detecção · **100% local** · zero envio de dados
 
 </div>
 
@@ -40,7 +40,7 @@ Pra distribuir pro usuário final: zipe `telador.exe` + `INICIAR.bat`, manda no 
 
 ## O que faz
 
-### 🔍 38 scanners em 9 categorias
+### 🔍 39 scanners em 10 categorias
 
 | Categoria | Cobertura |
 |---|---|
@@ -52,7 +52,8 @@ Pra distribuir pro usuário final: zipe `telador.exe` + `INICIAR.bat`, manda no 
 | **Live process** | DLL injection scan em `RobloxPlayerBeta.exe` (com `WinVerifyTrust`), process tree |
 | **Comportamento** | PowerShell history, RunMRU, TypedPaths, mouse macros (Logitech G HUB Lua, Razer, X-Mouse) |
 | **Network** | Conexões TCP/UDP ativas, DNS cache, hosts file (bloqueio de telemetria Roblox), **Discord cache** |
-| **Anti-evasão** | VM (VMware/VBox/Hyper-V/QEMU), Sandboxie, clock tampering |
+| **Anti-evasão** | VM (VMware/VBox/Hyper-V/QEMU), Sandboxie, clock tampering, **PC formatado pra SS** (6 sinais combinados) |
+| **Forensics** | Amcache, BAM, JumpLists, PE analysis com hash matching |
 
 ### 🛡️ Filtro de falsos positivos
 - **Dev-aware**: detecta Visual Studio/JetBrains/VS Code e rebaixa Cheat Engine/IDA/dnSpy automaticamente
