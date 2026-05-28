@@ -17,6 +17,8 @@ from database import (
     EXECUTOR_KEYWORDS,
     RUNMRU_KEY,
     TYPED_PATHS_KEY,
+    PS_HIGH_REQUIRES_DOWNLOAD_CONTEXT,
+    PS_DOWNLOAD_KEYWORDS,
 )
 
 try:
@@ -60,6 +62,15 @@ def _match_in_line(line: str) -> tuple[str | None, str | None]:
             for dom in SUSPICIOUS_DOMAINS:
                 if dom in lower:
                     return f"{kw} + {dom}", "high"
+
+            # Keywords HIGH que precisam de contexto: só permanecem HIGH
+            # se tiver keyword de download na mesma linha. Senão, MEDIUM.
+            # ExecutionPolicy Bypass sozinho ≠ cheat (admins/devs usam).
+            if kw in PS_HIGH_REQUIRES_DOWNLOAD_CONTEXT and sev == "high":
+                has_download = any(dl in lower for dl in PS_DOWNLOAD_KEYWORDS)
+                if not has_download:
+                    return kw, "medium"
+
             return kw, sev
 
     # 2. URLs de cheat sem comando explícito (já é suspeito)

@@ -395,13 +395,17 @@ def compute_verdict(findings: list) -> dict:
                 most_recent_hit = ts
 
     # Veredict baseado no score
-    if total_score >= 40:
+    # Conta quantas FONTES diferentes deram hit — 1 fonte só raramente é
+    # evidência de cheat. Cross-correlation > pontuação isolada.
+    sources_with_hits = sum(1 for f in findings if f.get("items"))
+
+    if total_score >= 50 and sources_with_hits >= 3:
         verdict, color = "CHEATER CONFIRMADO", "#ff4d4f"
-    elif total_score >= 20:
+    elif total_score >= 25 and sources_with_hits >= 2:
         verdict, color = "ALTAMENTE SUSPEITO", "#ff4d4f"
-    elif total_score >= 8:
+    elif total_score >= 12 and sources_with_hits >= 2:
         verdict, color = "SUSPEITO (REVISAR)", "#ffb020"
-    elif total_score >= 2:
+    elif total_score >= 4:
         verdict, color = "POSSÍVEIS PISTAS", "#ffe066"
     else:
         verdict, color = "LIMPO", "#3fbf7f"
