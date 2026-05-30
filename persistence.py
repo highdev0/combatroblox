@@ -15,7 +15,6 @@ import subprocess
 from datetime import datetime, timedelta
 
 from database import (
-    EXECUTOR_KEYWORDS,
     AUTOSTART_REGISTRY_KEYS_HKCU,
     AUTOSTART_REGISTRY_KEYS_HKLM,
     STARTUP_FOLDERS,

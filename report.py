@@ -44,7 +44,6 @@ def _render_section(finding: dict) -> str:
     sev_rank = {"high": 3, "medium": 2, "low": 1}
     for item in finding.get("items", []):
         sev = item.get("severity", "low")
-        color = SEVERITY_COLORS.get(sev, "#888")
         conf = item.get("confidence")
         fp_reason = item.get("fp_reason")
         orig_sev = item.get("original_severity")

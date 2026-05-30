@@ -15,7 +15,6 @@ from ctypes import wintypes
 from datetime import datetime
 
 from database import (
-    EXECUTOR_KEYWORDS,
     ROBLOX_PROCESS_NAMES,
     TRUSTED_DLL_PATHS,
     SUSPICIOUS_DLL_PATHS,
