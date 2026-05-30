@@ -68,9 +68,9 @@ def _render_section(finding: dict) -> str:
         ts_val = item.get('timestamp', '') or ''
         rows.append(f"""
         <tr class="row-{sev}" data-sev="{sev_rank.get(sev, 0)}" data-conf="{conf or 0}" data-ts="{_escape(ts_val)}">
-            <td class="sev"><span class="sev-dot" style="background:{color}" aria-hidden="true"></span>{_escape(sev.upper())}{downgrade_badge}</td>
+            <td class="sev"><span class="pill pill-{sev}">{_escape(sev.upper())}</span>{downgrade_badge}</td>
             <td class="label">{_escape(item.get('label', ''))}</td>
-            <td class="detail"><code>{_escape(detail_text)}</code></td>
+            <td class="detail"><code class="clamp" title="clique pra expandir">{_escape(detail_text)}</code></td>
             <td class="match"><code>{_escape(item.get('matched', ''))}</code></td>
             <td class="conf">{conf_html}</td>
             <td class="ts"><time>{_escape(ts_val)}</time></td>
@@ -765,6 +765,7 @@ CONTROLS_JS = """
         setTimeout(() => t.remove(), 1600);
     }
     document.querySelectorAll('code').forEach(c => {
+        if (c.classList.contains('clamp')) return;  // truncável tem handler próprio
         c.style.cursor = 'pointer';
         c.title = 'Clique pra copiar';
         c.addEventListener('click', (e) => {
@@ -772,6 +773,16 @@ CONTROLS_JS = """
             navigator.clipboard.writeText(c.textContent).then(() => {
                 showToast('✓ Copiado');
             }).catch(() => {});
+        });
+    });
+
+    // === Detalhe truncável: clique expande/recolhe ===
+    document.querySelectorAll('code.clamp').forEach(c => {
+        c.addEventListener('click', () => c.classList.toggle('expanded'));
+        // Duplo-clique copia o conteúdo (acesso ao copy mantido)
+        c.addEventListener('dblclick', (e) => {
+            e.preventDefault();
+            navigator.clipboard.writeText(c.textContent).then(() => showToast('✓ Copiado')).catch(() => {});
         });
     });
 
@@ -1912,6 +1923,72 @@ def generate_html_report(findings: list[dict], sys_info: dict,
     .sess-code.sess-none { color: var(--c-text-faint); }
     .sess-ok   { color: var(--c-green); font-size: 12px; }
     .sess-warn { color: var(--c-orange); font-size: 12px; }
+
+    /* ================================================================
+       === Readability pass — pills, sticky headers, clamp, hero
+       ================================================================ */
+
+    /* Severity como PILL sólida (substitui dot+texto) */
+    .pill {
+        display: inline-block; padding: 3px 10px; border-radius: 999px;
+        font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
+        line-height: 1.4; white-space: nowrap;
+        border: 1px solid transparent;
+    }
+    .pill-high   { background: rgba(255,77,79,0.16);  color: #ff7173; border-color: rgba(255,77,79,0.35); }
+    .pill-medium { background: rgba(255,176,32,0.14); color: #ffc04d; border-color: rgba(255,176,32,0.3); }
+    .pill-low    { background: rgba(255,224,102,0.12);color: #ffe066; border-color: rgba(255,224,102,0.25); }
+    .sev { white-space: nowrap; }
+
+    /* Linhas: faixa lateral colorida em vez de fundo gritante */
+    tr.row-high   { background: transparent; box-shadow: inset 3px 0 0 var(--c-red); }
+    tr.row-medium { background: transparent; box-shadow: inset 3px 0 0 var(--c-orange); }
+    tr.row-low    { box-shadow: inset 3px 0 0 rgba(255,224,102,0.4); }
+    td.sev { padding-left: 14px; }
+
+    /* Sticky table header — não perde o cabeçalho em tabela longa */
+    table.sortable thead th {
+        position: sticky; top: 0; z-index: 5;
+        background: var(--c-bg-4);
+        box-shadow: 0 1px 0 var(--c-border);
+    }
+
+    /* Detalhe truncável: 2 linhas, expande no clique */
+    code.clamp {
+        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+        overflow: hidden; white-space: pre-wrap; word-break: break-word;
+        cursor: zoom-in; max-width: 520px;
+    }
+    code.clamp.expanded {
+        -webkit-line-clamp: unset; display: block; cursor: zoom-out;
+    }
+    td.detail { max-width: 540px; }
+
+    /* Coluna de severidade enxuta */
+    th[data-sort="sev"] { width: 120px; }
+    th[data-sort="conf"] { width: 80px; }
+    th[data-sort="ts"]   { width: 150px; }
+
+    /* Hero do veredito — mais presença, sóbrio */
+    .overview {
+        display: grid; grid-template-columns: 1fr auto; gap: 20px;
+        align-items: center;
+    }
+    .overview h2 { grid-column: 1 / -1; }
+    .overview .big-verdict {
+        text-align: left; margin: 0; font-size: 30px;
+        grid-column: 1; align-self: center;
+    }
+    .overview .verdict-sub { grid-column: 1; margin: 0; text-align: left; }
+    .overview .stats {
+        grid-column: 2; grid-row: 2 / 4; justify-content: flex-end;
+        gap: 8px;
+    }
+    @media (max-width: 720px) {
+        .overview { grid-template-columns: 1fr; }
+        .overview .big-verdict, .overview .verdict-sub { text-align: center; }
+        .overview .stats { grid-column: 1; justify-content: center; }
+    }
 
     /* Focus styles refinados */
     .nav-link:focus-visible {

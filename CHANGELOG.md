@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.8.1] - 2026-05-30
+
+Frontend — passe de legibilidade (sóbrio, sem efeito gratuito).
+
+### Changed
+
+- **Severidade vira pill sólida** em vez de dot+texto — mais escaneável,
+  cores consistentes (high/medium/low).
+- **Linhas com faixa lateral colorida** (`box-shadow: inset`) em vez de
+  fundo tingido gritante. Mais limpo em tabela longa.
+- **Cabeçalho de tabela fixo** (`position: sticky`) — não some o header
+  ao rolar uma tabela com muitos hits.
+- **Coluna "Detalhe" truncada em 2 linhas**, expande no clique
+  (duplo-clique copia). Paths longos + nota de FP-filter não estouram
+  mais o layout.
+- **Card de resumo (hero) reorganizado** em grid: veredito grande à
+  esquerda, stats à direita. Responsivo abaixo de 720px.
+
 ## [3.8.0] - 2026-05-30
 
 Foco em CONFIANÇA no resultado — não dá mais pra forjar/reaproveitar a SS,
