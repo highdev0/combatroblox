@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.9.0] - 2026-05-30
+
+Permite estender a base de assinaturas sem recompilar.
+
+### Added
+
+- Carregamento de assinaturas externas (`signatures.json`). Se o arquivo
+  existir ao lado do executável, suas entradas são mescladas às listas
+  embutidas na inicialização. Seções aceitas: `executor_keywords`,
+  `executor_process_names`, `suspicious_domains`, `suspicious_folder_names`,
+  `script_red_flags`. Permite adicionar um executor novo entre releases
+  sem rebuildar.
+- `signatures.example.json` documentando o formato.
+
+### Notes
+
+- Degrada graciosamente: arquivo ausente, JSON inválido ou entradas
+  malformadas são ignorados sem interromper a execução.
+- 17 testes no total (3 novos para o carregamento de assinaturas).
+
 ## [3.8.2] - 2026-05-30
 
 Caça a bugs — varredura com pyflakes + revisão manual.

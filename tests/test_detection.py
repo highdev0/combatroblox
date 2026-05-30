@@ -156,3 +156,40 @@ def test_overlay_whitelist_covers_common_apps():
     import live_analysis
     for app in ("discord.exe", "steam.exe", "obs64.exe", "nvcontainer.exe", "explorer.exe"):
         assert app in live_analysis.OVERLAY_WHITELIST, f"{app} deveria estar na whitelist de overlay"
+
+
+# --------------------------- Assinaturas externas (signatures.json) ---------------------------
+
+def test_external_signatures_merge(tmp_path):
+    import json, database
+    p = tmp_path / "signatures.json"
+    p.write_text(json.dumps({
+        "executor_keywords": {"zzznovoexec": "high", "ignorar_sev": "banana"},
+        "executor_process_names": {"zzznovoexec.exe": "medium"},
+        "naosei_secao": {"x": "high"},
+    }), encoding="utf-8")
+
+    added, err = database.load_external_signatures(str(p))
+    try:
+        assert err is None
+        assert added == 2, f"esperava 2 mescladas, veio {added}"  # severidade inválida ignorada
+        assert database.EXECUTOR_KEYWORDS.get("zzznovoexec") == "high"
+        assert database.EXECUTOR_PROCESS_NAMES.get("zzznovoexec.exe") == "medium"
+        assert "ignorar_sev" not in database.EXECUTOR_KEYWORDS
+    finally:
+        database.EXECUTOR_KEYWORDS.pop("zzznovoexec", None)
+        database.EXECUTOR_PROCESS_NAMES.pop("zzznovoexec.exe", None)
+
+
+def test_external_signatures_missing_is_safe(tmp_path):
+    import database
+    added, err = database.load_external_signatures(str(tmp_path / "naoexiste.json"))
+    assert added == 0 and err is None
+
+
+def test_external_signatures_invalid_json_degrades(tmp_path):
+    import database
+    p = tmp_path / "signatures.json"
+    p.write_text("{ isto nao e json valido ", encoding="utf-8")
+    added, err = database.load_external_signatures(str(p))
+    assert added == 0 and err is not None  # avisa mas não quebra
