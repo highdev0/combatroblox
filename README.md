@@ -1,20 +1,14 @@
 <div align="center">
 
-<svg width="120" height="120" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#ff4d4f"/>
-      <stop offset="0.5" stop-color="#ff7a3f"/>
-      <stop offset="1" stop-color="#ffb020"/>
-    </linearGradient>
-  </defs>
-  <path d="M32 4 L56 14 L56 34 Q56 50 32 60 Q8 50 8 34 L8 14 Z" fill="url(#g)"/>
-  <circle cx="26" cy="28" r="9" fill="none" stroke="#0e0e10" stroke-width="3"/>
-  <line x1="33" y1="35" x2="42" y2="44" stroke="#0e0e10" stroke-width="3" stroke-linecap="round"/>
-  <text x="32" y="56" font-size="6" font-weight="800" fill="#0e0e10" text-anchor="middle" letter-spacing="1.5">TELADOR</text>
-</svg>
+```
+┌─ telador ───────────────────────────────┐
+│  >_ TELADOR                              │
+│     roblox screenshare                   │
+│     análise forense local                │
+└──────────────────────────────────────────┘
+```
 
-# Telador BR
+# Telador
 
 **Ferramenta forense local para SS em comunidades Roblox**
 

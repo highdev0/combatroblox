@@ -16,16 +16,18 @@ except ImportError:
     HAS_SIGNING = False
 
 
+# Paleta "terminal forense": vermelho de terminal, âmbar (cor de marca),
+# bege apagado pro low, verde pro estado limpo.
 SEVERITY_COLORS = {
-    "high":   "#ff4d4f",
-    "medium": "#ffb020",
-    "low":    "#ffe066",
+    "high":   "#ff5f56",
+    "medium": "#e8b339",
+    "low":    "#9c8f6a",
 }
 
 STATUS_BADGE = {
-    "clean":      ("LIMPO",     "#3fbf7f"),
-    "suspicious": ("SUSPEITO",  "#ff4d4f"),
-    "error":      ("ERRO/SKIP", "#888888"),
+    "clean":      ("LIMPO",    "#5fcf8f"),
+    "suspicious": ("SUSPEITO", "#ff5f56"),
+    "error":      ("SKIP",     "#6a6a6a"),
 }
 
 
@@ -447,27 +449,6 @@ def _render_pe_section(findings: list) -> str:
     """
 
 
-LOGO_SVG = """
-<svg viewBox="0 0 64 64" class="brand-logo" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-        <linearGradient id="brandGrad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stop-color="#ff4d4f"/>
-            <stop offset="0.5" stop-color="#ff7a3f"/>
-            <stop offset="1" stop-color="#ffb020"/>
-        </linearGradient>
-        <filter id="glow"><feGaussianBlur stdDeviation="1.5"/></filter>
-    </defs>
-    <path d="M32 4 L56 14 L56 34 Q56 50 32 60 Q8 50 8 34 L8 14 Z"
-          fill="url(#brandGrad)" stroke="#0e0e10" stroke-width="0.5"/>
-    <circle cx="26" cy="28" r="9" fill="none" stroke="#0e0e10" stroke-width="3"/>
-    <line x1="33" y1="35" x2="42" y2="44" stroke="#0e0e10" stroke-width="3" stroke-linecap="round"/>
-    <text x="32" y="56" font-size="6" font-weight="800" fill="#0e0e10"
-          text-anchor="middle" font-family="Inter, system-ui, sans-serif"
-          letter-spacing="1.5">TELADOR</text>
-</svg>
-"""
-
-
 def _render_sidebar(findings: list, verdict: dict = None) -> str:
     """Sidebar sticky com TOC e contador por section."""
     links = [
@@ -514,7 +495,8 @@ def _render_sidebar(findings: list, verdict: dict = None) -> str:
     return f"""
     <aside class="sidebar">
         <div class="sidebar-head">
-            <div class="brand-row">{LOGO_SVG}<h3>TELADOR BR</h3></div>
+            <div class="wordmark"><span class="wm-prompt">&gt;_</span> TELADOR<span class="wm-cursor">_</span></div>
+            <div class="wordmark-sub">roblox screenshare · análise forense local</div>
             {score_badge}
         </div>
         <nav class="sidebar-nav">
@@ -1545,16 +1527,6 @@ def generate_html_report(findings: list[dict], sys_info: dict,
         }
     }
 
-    /* Brand */
-    .brand-row {
-        display: flex; align-items: center; gap: 10px;
-        margin-bottom: 14px;
-    }
-    .brand-logo {
-        width: 32px; height: 32px; flex-shrink: 0;
-        opacity: 0.95;
-    }
-    .brand-row h3 { margin: 0; line-height: 1; }
 
     /* ================================================================
        === Calm pass — quieter, more deliberate
@@ -2013,6 +1985,166 @@ def generate_html_report(findings: list[dict], sys_info: dict,
         details > summary::before { display: none; }
         .empty-svg circle { stroke: #3fbf7f; }
     }
+
+    /* ================================================================
+       === IDENTIDADE: terminal forense
+       Monospace em tudo, paleta âmbar sobre preto profundo, molduras de
+       terminal. Vem por último -> tem precedência sobre o tema anterior.
+       ================================================================ */
+
+    :root {
+        --c-bg-0: #060607;
+        --c-bg-1: #0a0a0b;
+        --c-bg-2: #0f0f11;
+        --c-bg-3: #121214;
+        --c-bg-4: #1a1a1d;
+        --c-border: #242420;
+        --c-border-soft: #1a1a18;
+        --c-text: #d8d2c4;        /* off-white quente */
+        --c-text-mute: #8f897b;
+        --c-text-soft: #6a655a;
+        --c-text-faint: #4a463e;
+        --c-amber: #e8b339;       /* cor de marca */
+        --c-red: #ff5f56;
+        --c-orange: #e8b339;
+        --c-yellow: #d8c47a;
+        --c-green: #5fcf8f;
+        accent-color: #e8b339;
+    }
+
+    /* Monospace em toda a interface — núcleo da identidade */
+    body, .nav-link, .sidebar-head h3, .page-header h1, button, input,
+    h1, h2, h3, .big-verdict, .stat .num, kbd, .pill, code, .sub, .desc,
+    .summary, th, td, .wordmark, .nav-group-title {
+        font-family: 'JetBrains Mono', 'Cascadia Code', 'Cascadia Mono',
+                     'Consolas', 'SF Mono', ui-monospace, monospace;
+    }
+    body {
+        background: var(--c-bg-1);
+        color: var(--c-text);
+        letter-spacing: 0;
+    }
+    h1, h2, h3 { letter-spacing: 0; font-weight: 700; }
+
+    /* Wordmark de terminal no lugar do logo */
+    .wordmark {
+        font-size: 19px; font-weight: 700; color: var(--c-amber);
+        letter-spacing: 1px; line-height: 1;
+    }
+    .wm-prompt { color: var(--c-green); margin-right: 2px; }
+    .wm-cursor { color: var(--c-amber); opacity: 0.55; }
+    .wordmark-sub {
+        color: var(--c-text-soft); font-size: 10.5px;
+        margin: 6px 0 4px; letter-spacing: 0.3px;
+    }
+
+    /* Cards e seções: cantos retos, borda âmbar discreta no hover */
+    .card {
+        background: var(--c-bg-2);
+        border: 1px solid var(--c-border);
+        border-radius: 4px;
+    }
+    .card:hover { border-color: #34301f; }
+    .card h2 {
+        color: var(--c-text);
+        font-size: 14px; text-transform: lowercase; letter-spacing: 0.5px;
+    }
+    /* Prefixo de seção estilo prompt */
+    .card > details > summary h2::after,
+    .card > h2::after { content: ""; }
+    .card h2::before { content: "// "; color: var(--c-amber); opacity: 0.6; }
+    .status-suspicious h2::before { content: "!! "; color: var(--c-red); opacity: 1; }
+
+    /* Sidebar: barra de terminal */
+    .sidebar { background: var(--c-bg-0); border-right: 1px solid var(--c-border); }
+    .sidebar-head { border-bottom: 1px solid var(--c-border); }
+    .nav-group-title {
+        color: var(--c-text-faint); text-transform: lowercase;
+        font-size: 10px; letter-spacing: 1px;
+    }
+    .nav-group-title::before { content: "─ "; color: var(--c-amber); opacity: 0.4; }
+    .nav-link { color: var(--c-text-mute); font-size: 12px; border-radius: 3px; }
+    .nav-link:hover { background: rgba(232,179,57,0.06); color: var(--c-text); }
+    .nav-link.nav-hit { color: var(--c-text); }
+    .nav-badge {
+        background: transparent; color: var(--c-amber);
+        border: 1px solid #34301f; border-radius: 3px;
+        padding: 0 6px; font-size: 10px;
+    }
+    .nav-score {
+        border-radius: 3px; font-weight: 700; color: #060607;
+    }
+
+    /* Page header como title-bar de terminal */
+    .page-header {
+        border: 1px solid var(--c-border); border-radius: 4px;
+        background: var(--c-bg-2); padding: 0; overflow: hidden;
+    }
+    .term-bar {
+        display: flex; align-items: center; gap: 7px;
+        background: var(--c-bg-3); padding: 9px 14px;
+        border-bottom: 1px solid var(--c-border);
+    }
+    .term-dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+    .td-r { background: #ff5f56; } .td-y { background: #e8b339; } .td-g { background: #5fcf8f; }
+    .term-bar-title {
+        color: var(--c-text-soft); font-size: 11px; margin-left: 6px;
+    }
+    .term-body { padding: 14px; }
+    .term-body .prompt { color: var(--c-green); }
+    .term-body .h1line { color: var(--c-amber); font-weight: 700; font-size: 16px; }
+    .page-header h1 {
+        all: unset; color: var(--c-amber); font-weight: 700;
+        font-size: 16px; font-family: inherit;
+    }
+    .page-header .sub { color: var(--c-text-soft); font-size: 11.5px; margin-top: 4px; }
+
+    /* Severidade como tag de terminal [HIGH], não pill arredondada */
+    .pill {
+        border-radius: 2px; padding: 2px 7px; font-weight: 700;
+        border: 1px solid currentColor; background: transparent;
+    }
+    .pill::before { content: "["; } .pill::after { content: "]"; }
+    .pill-high   { color: #ff5f56; }
+    .pill-medium { color: #e8b339; }
+    .pill-low    { color: #9c8f6a; }
+
+    /* Tabela */
+    th { background: var(--c-bg-3); color: var(--c-text-mute);
+         text-transform: lowercase; letter-spacing: 0.5px; }
+    table.sortable thead th { background: var(--c-bg-3); }
+    tr.row-high   { box-shadow: inset 2px 0 0 #ff5f56; }
+    tr.row-medium { box-shadow: inset 2px 0 0 #e8b339; }
+    tr.row-low    { box-shadow: inset 2px 0 0 #9c8f6a; }
+    code {
+        background: var(--c-bg-1); border: 1px solid var(--c-border);
+        color: var(--c-amber); border-radius: 2px;
+    }
+
+    /* Estado/score e veredito */
+    .big-verdict { letter-spacing: 1px; text-shadow: none; }
+    .stat { background: var(--c-bg-1); border: 1px solid var(--c-border); border-radius: 3px; }
+    .stat .num { color: var(--c-text); }
+
+    /* Inputs e botões */
+    .controls input {
+        background: var(--c-bg-1); border: 1px solid var(--c-border);
+        color: var(--c-text); border-radius: 3px;
+    }
+    .controls input:focus { border-color: var(--c-amber); background: var(--c-bg-2); }
+    .filter-btn { border-radius: 3px; }
+    .filter-btn.ghost { border: 1px solid var(--c-border); color: var(--c-text-mute); }
+    kbd {
+        background: var(--c-bg-1); border: 1px solid var(--c-border);
+        border-bottom-width: 2px; color: var(--c-amber);
+    }
+
+    ::selection { background: rgba(232,179,57,0.3); color: var(--c-text); }
+    ::-webkit-scrollbar-thumb {
+        background: #34301f; border: 2px solid var(--c-bg-0); border-radius: 6px;
+    }
+    ::-webkit-scrollbar-thumb:hover { background: #4a4326; }
+    *:focus-visible { outline: 2px solid var(--c-amber); }
     """
 
     html_doc = f"""<!DOCTYPE html>
@@ -2027,8 +2159,16 @@ def generate_html_report(findings: list[dict], sys_info: dict,
     {sidebar_html}
     <main class="main-content" id="main-content" tabindex="-1">
     <header class="page-header">
-        <h1>TELADOR BR</h1>
-        <div class="sub">Relatório gerado em {sys_info.get('scan_time', '')}</div>
+        <div class="term-bar">
+            <span class="term-dot td-r"></span>
+            <span class="term-dot td-y"></span>
+            <span class="term-dot td-g"></span>
+            <span class="term-bar-title">telador — relatório de verificação</span>
+        </div>
+        <div class="term-body">
+            <div class="h1line"><span class="prompt">&gt;_</span> TELADOR</div>
+            <div class="sub"><span class="prompt">scan://</span>{_escape(sys_info.get('host', '?'))} · {_escape(sys_info.get('scan_time', ''))}</div>
+        </div>
     </header>
     <span id="summary"></span>{summary_html}
     {session_html}

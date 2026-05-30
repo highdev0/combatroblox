@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.10.0] - 2026-05-30
+
+Identidade visual própria: terminal forense.
+
+### Changed
+
+- Relatório HTML repaginado com estética de terminal: tipografia
+  monoespaçada em toda a interface, paleta âmbar sobre preto profundo,
+  e o cabeçalho como uma janela de terminal (três pontos e título).
+- Logo trocado por um wordmark de terminal (`>_ TELADOR`) na barra
+  lateral e no relatório.
+- Severidades exibidas como tags `[HIGH]` / `[MEDIUM]` / `[LOW]` em vez
+  de etiquetas arredondadas.
+- Banner do console agora em âmbar, com a linha `>_`.
+- README com wordmark ASCII no lugar do SVG anterior (que o GitHub não
+  renderizava em Markdown).
+
+Mudança apenas estética; toda a funcionalidade e os dados do relatório
+permanecem iguais. 17 testes passando.
+
 ## [3.9.0] - 2026-05-30
 
 Permite estender a base de assinaturas sem recompilar.
