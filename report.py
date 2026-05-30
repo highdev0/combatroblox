@@ -116,14 +116,56 @@ def _render_section(finding: dict) -> str:
 
 
 def _render_system(info: dict) -> str:
+    # session_* têm card próprio (Verificação de Sessão) — não repetir aqui.
     rows = "".join(
         f"<tr><th>{_escape(k)}</th><td>{_escape(v)}</td></tr>"
         for k, v in info.items()
+        if k not in ("session_id", "session_code")
     )
     return f"""
     <section class="card sysinfo">
         <h2>Informações do Sistema</h2>
         <table class="sys">{rows}</table>
+    </section>
+    """
+
+
+def _render_session(info: dict, exe_hash: str = "") -> str:
+    """
+    Card de verificação de sessão (prova de SS ao vivo).
+    O código é ditado pelo supervisor no início e digitado pelo telado —
+    prova que o relatório é desta sessão, não um reaproveitado.
+    """
+    session_id = info.get("session_id", "")
+    code = info.get("session_code", "")
+    scan_time = info.get("scan_time", "")
+    if not session_id and not code:
+        return ""
+
+    if code:
+        code_html = (f'<span class="sess-code">{_escape(code)}</span>'
+                     '<span class="sess-ok">✓ código informado pelo supervisor</span>')
+    else:
+        code_html = ('<span class="sess-code sess-none">—</span>'
+                     '<span class="sess-warn">⚠ sem código — sessão NÃO verificada '
+                     '(rode com --codigo XYZ ditado pelo supervisor)</span>')
+
+    hash_row = ""
+    if exe_hash:
+        hash_row = (f'<div class="sess-row"><span class="sess-k">SHA256 do telador</span>'
+                    f'<code>{_escape(exe_hash)}</code></div>')
+
+    return f"""
+    <section class="card session" id="session">
+        <h2>🔐 Verificação de Sessão</h2>
+        <p class="desc">Prova de que este relatório foi gerado nesta SS ao vivo —
+        não é um relatório antigo reaproveitado.</p>
+        <div class="sess-grid">
+            <div class="sess-row"><span class="sess-k">ID da sessão</span><code>{_escape(session_id)}</code></div>
+            <div class="sess-row"><span class="sess-k">Código do supervisor</span><span class="sess-codewrap">{code_html}</span></div>
+            <div class="sess-row"><span class="sess-k">Gerado em</span><code>{_escape(scan_time)}</code></div>
+            {hash_row}
+        </div>
     </section>
     """
 
@@ -431,6 +473,7 @@ def _render_sidebar(findings: list, verdict: dict = None) -> str:
     """Sidebar sticky com TOC e contador por section."""
     links = [
         ('summary', '📊 Resumo', None),
+        ('session', '🔐 Sessão', None),
         ('high-confidence', '🎯 Cross-Correlation', None),
         ('fp-stats', '🛡️ FP Filter', None),
         ('timeline', '🕐 Timeline', None),
@@ -952,7 +995,13 @@ def generate_html_report(findings: list[dict], sys_info: dict,
             f"telador_relatorio_{ts_tag}.html",
         )
 
+    # Hash do exe (usado no card de sessão e no rodapé)
+    self_hash = ""
+    if HAS_SIGNING:
+        self_hash = report_signing.get_self_hash() or ""
+
     summary_html = _render_summary(findings, verdict)
+    session_html = _render_session(sys_info, self_hash)
     fp_html = _render_fp_stats(fp_stats or {})
     sys_html = _render_system(sys_info)
     screens_html = _render_screenshots(screenshots or {})
@@ -968,12 +1017,10 @@ def generate_html_report(findings: list[dict], sys_info: dict,
     total_hits = sum(len(f.get("items", [])) for f in findings)
     empty_html = _render_empty_state() if total_hits == 0 else ""
 
-    # Banner com hash do exe
+    # Rodapé com hash do exe
     exe_hash = ""
-    if HAS_SIGNING:
-        h = report_signing.get_self_hash()
-        if h:
-            exe_hash = f'<div class="exe-hash">SHA256 do telador: <code>{h}</code></div>'
+    if self_hash:
+        exe_hash = f'<div class="exe-hash">SHA256 do telador: <code>{self_hash}</code></div>'
 
     extra_css = """
     .screenshots .shots { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 12px; }
@@ -1846,6 +1893,26 @@ def generate_html_report(findings: list[dict], sys_info: dict,
         display: block;
     }
 
+    /* Verificação de Sessão */
+    .session { border-left: 3px solid var(--c-green); }
+    .sess-grid { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+    .sess-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .sess-k {
+        flex: 0 0 160px; color: var(--c-text-soft);
+        font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
+    }
+    .sess-codewrap { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .sess-code {
+        font-family: 'JetBrains Mono', monospace; font-weight: 700;
+        font-size: 18px; letter-spacing: 2px;
+        color: var(--c-green);
+        background: var(--c-bg-1); border: 1px solid var(--c-border);
+        padding: 4px 12px; border-radius: 6px;
+    }
+    .sess-code.sess-none { color: var(--c-text-faint); }
+    .sess-ok   { color: var(--c-green); font-size: 12px; }
+    .sess-warn { color: var(--c-orange); font-size: 12px; }
+
     /* Focus styles refinados */
     .nav-link:focus-visible {
         outline: none;
@@ -1888,6 +1955,7 @@ def generate_html_report(findings: list[dict], sys_info: dict,
         <div class="sub">Relatório gerado em {sys_info.get('scan_time', '')}</div>
     </header>
     <span id="summary"></span>{summary_html}
+    {session_html}
     {empty_html}
     <span id="high-confidence"></span>{hc_html}
     <span id="fp-stats"></span>{fp_html}

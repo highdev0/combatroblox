@@ -23,6 +23,7 @@ import sys
 import time
 import json
 import ctypes
+import secrets
 import argparse
 import tempfile
 import threading
@@ -90,7 +91,7 @@ BANNER = r"""
 
 def print_banner():
     print(f"{RED}{BANNER}{RESET}")
-    print(f"{GREY}  Versão 3.7.0  ·  39 scanners  ·  Matching word-boundary  ·  Suíte de testes{RESET}\n")
+    print(f"{GREY}  Versão 3.8.0  ·  40 scanners  ·  Prova de SS ao vivo  ·  Overlay/ESP externo{RESET}\n")
     self_hash = report_signing.get_self_hash()
     if self_hash:
         print(f"{GREY}  SHA256 deste exe: {self_hash[:16]}...{self_hash[-16:]}{RESET}")
@@ -372,6 +373,9 @@ def main():
                         help="Modo agressivo no scanner de scripts (.txt genérico também entra)")
     parser.add_argument("--only",          type=str, default=None,
                         help="Rodar só checagens específicas (separadas por vírgula)")
+    parser.add_argument("--codigo",        type=str, default=None,
+                        help="Código de verificação ditado pelo supervisor no início da SS "
+                             "(prova que o relatório é desta sessão ao vivo)")
     args = parser.parse_args()
 
     print_banner()
@@ -420,6 +424,12 @@ def main():
         print(f"{GREEN}● Modo de scripts: anti-falso-positivo{RESET}")
 
     sys_info = scanners.system_info()
+    # Prova de SS ao vivo: session_id aleatório (sempre) + código do supervisor
+    # (opcional). Ambos entram no sys_info, que é assinado no .tsr e exibido
+    # no relatório. Garante que o relatório é DESTA sessão, não reaproveitado.
+    sys_info["session_id"] = secrets.token_hex(4).upper()
+    sys_info["session_code"] = (args.codigo or "").strip()
+
     # --quick: só scanners base, skip todos os extras
     if args.quick:
         chain = list(scanners.ALL_SCANNERS)

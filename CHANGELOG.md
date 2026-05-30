@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.8.0] - 2026-05-30
+
+Foco em CONFIANÇA no resultado — não dá mais pra forjar/reaproveitar a SS,
+e detecta cheat visual externo que não injeta DLL.
+
+### Added
+
+#### 🔐 Prova de SS ao vivo (`--codigo`)
+- O supervisor dita um código no início da SS; o telado roda
+  `telador.exe --codigo XYZ`. O código + um `session_id` aleatório
+  (`secrets.token_hex`) + timestamp entram no `sys_info`, que já é
+  assinado por HMAC no `.tsr` e exibido em card dedicado no relatório.
+- Mata a fraude de "rodar num PC limpo e reapresentar o relatório
+  depois": sem o código certo da sessão, o relatório não confere.
+- Sem `--codigo`, o card avisa em laranja "sessão NÃO verificada".
+
+#### 🖼️ Detecção de overlay / ESP externo (`scan_overlay_windows`)
+- 40º scanner. Enumera janelas com `WS_EX_LAYERED + WS_EX_TRANSPARENT
+  + WS_EX_TOPMOST` — janela invisível ao clique desenhada por cima de
+  tudo, assinatura de ESP/radar/aimbot visual que roda FORA do processo
+  (não injeta DLL, então o scan de DLL não pega).
+- Whitelist generosa (Discord, NVIDIA, Steam, OBS, RTSS, Game Bar,
+  iCUE, G HUB, PowerToys, etc.) → severity `medium` no resto pra evitar
+  FP de overlay legítimo desconhecido.
+
+### Tests
+- +5 testes (sessão verificada/não-verificada, sysinfo não polui card,
+  overlay scanner roda, whitelist cobre apps comuns). Total: 14.
+
 ## [3.7.0] - 2026-05-30
 
 Corrige a RAIZ dos falsos positivos + primeira suíte de testes.
