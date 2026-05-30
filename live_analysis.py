@@ -150,13 +150,9 @@ def _item(label, detail, severity, matched, timestamp="", meta_only=False):
 
 
 def _match_keyword(text: str):
-    if not text:
-        return None, None
-    lower = text.lower()
-    for keyword, severity in EXECUTOR_KEYWORDS.items():
-        if keyword in lower:
-            return keyword, severity
-    return None, None
+    # Delega pro matching central (word-boundary, anti-FP).
+    import matching
+    return matching.match_keyword(text)
 
 
 def _classify_dll_path(path: str) -> tuple[str, str]:

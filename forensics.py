@@ -22,13 +22,10 @@ except ImportError:
 
 
 def _match_keyword(text: str):
-    if not text:
-        return None, None
-    lower = text.lower()
-    for keyword, severity in EXECUTOR_KEYWORDS.items():
-        if keyword in lower:
-            return keyword, severity
-    return None, None
+    # Delega pro matching central (word-boundary, anti-FP). Wrapper mantido
+    # pra não tocar nos call sites.
+    import matching
+    return matching.match_keyword(text)
 
 
 def _result(name, description, items, error=None):
