@@ -24,7 +24,7 @@
 [![License](https://img.shields.io/badge/License-MIT-3fbf7f?style=for-the-badge)](LICENSE)
 [![Last Commit](https://img.shields.io/github/last-commit/highdev0/combatroblox?style=for-the-badge&color=888)](https://github.com/highdev0/combatroblox/commits/main)
 
-**39 scanners** em paralelo · **542 assinaturas** de detecção · **100% local** · zero envio de dados
+40 scanners em paralelo · 542 assinaturas de detecção · execução local, sem envio de dados
 
 </div>
 
@@ -40,56 +40,53 @@ Pra distribuir pro usuário final: zipe `telador.exe` + `INICIAR.bat`, manda no 
 
 ## O que faz
 
-### 🔍 39 scanners em 10 categorias
+### Scanners (40, em 10 categorias)
 
 | Categoria | Cobertura |
 |---|---|
-| **Execução** | Prefetch, UserAssist, MUICache, Amcache (SHA1), BAM (timestamp exato) |
-| **Persistência** | Startup folder, Run/RunOnce, Scheduled Tasks, WER crash dumps |
-| **Filesystem** | Recent files, Lixeira ($I parser), JumpLists, Downloads, hidden files |
-| **Browser** | Chrome, Edge, Brave, Opera — URLs + downloads |
-| **Roblox** | Logs do client, Bloxstrap, bytecode/autoexec dumps, scripts `.lua/.luau` |
-| **Live process** | DLL injection scan em `RobloxPlayerBeta.exe` (com `WinVerifyTrust`), process tree |
-| **Comportamento** | PowerShell history, RunMRU, TypedPaths, mouse macros (Logitech G HUB Lua, Razer, X-Mouse) |
-| **Network** | Conexões TCP/UDP ativas, DNS cache, hosts file (bloqueio de telemetria Roblox), **Discord cache** |
-| **Anti-evasão** | VM (VMware/VBox/Hyper-V/QEMU), Sandboxie, clock tampering, **PC formatado pra SS** (6 sinais combinados) |
-| **Forensics** | Amcache, BAM, JumpLists, PE analysis com hash matching |
+| Execução | Prefetch, UserAssist, MUICache, Amcache (SHA1), BAM (timestamp exato) |
+| Persistência | Pasta Startup, Run/RunOnce, Scheduled Tasks, dumps do WER |
+| Sistema de arquivos | Arquivos recentes, Lixeira (parser $I), JumpLists, Downloads, arquivos ocultos |
+| Navegador | Chrome, Edge, Brave, Opera (URLs e downloads) |
+| Roblox | Logs do client, Bloxstrap, dumps de script/autoexec, scripts `.lua`/`.luau` |
+| Processo ao vivo | DLLs carregadas no `RobloxPlayerBeta.exe` (WinVerifyTrust), árvore de processo, overlay/ESP externo |
+| Comportamento | Histórico do PowerShell, Win+R, barra do Explorer, macros de mouse (G HUB, Razer, X-Mouse) |
+| Rede | Conexões TCP/UDP, cache de DNS, arquivo hosts, cache do Discord |
+| Anti-evasão | VM (VMware/VBox/Hyper-V/QEMU), Sandboxie, relógio alterado, formatação recente |
+| Forense | Amcache, BAM, JumpLists, análise PE com comparação de hash |
 
-### 🛡️ Filtro de falsos positivos
-- **Dev-aware**: detecta Visual Studio/JetBrains/VS Code e rebaixa Cheat Engine/IDA/dnSpy automaticamente
-- **Time decay**: hits >30d perdem severity, >90d viram LOW
-- **Whitelist contextual**: `.git`, `node_modules`, Steam, system folders ignorados
-- **Smart browser**: visita a forum ≠ download direto
-- **Veredict ponderado**: score numérico, não só HIGH counter
+### Filtro de falsos positivos
+- Detecta ambiente de desenvolvimento (Visual Studio, JetBrains, VS Code) e rebaixa ferramentas como Cheat Engine e IDA.
+- Decaimento por tempo: itens com mais de 30 dias perdem severidade; acima de 90 dias viram baixa.
+- Caminhos ignorados: `.git`, `node_modules`, biblioteca Steam, pastas de sistema.
+- Contexto de navegador: visita a fórum não equivale a download.
+- Veredito ponderado por severidade e confiança, não apenas contagem.
 
-### 🔬 PE Analysis
-SHA256 + parser nativo de PE header em todo `.exe`/`.dll` flagado:
-- Compile timestamp (compilado <30d = upgrade)
-- Detecta packers (UPX/Themida/VMProtect/Enigma/ASPack/PECompact/MPRESS)
-- Hash match contra database de executores conhecidos
-- Machine arch (x86/x64/ARM64)
+### Análise PE
+SHA256 e leitura nativa do cabeçalho PE de cada executável encontrado:
+- Data de compilação (recente eleva a severidade).
+- Detecção de empacotadores (UPX, Themida, VMProtect, Enigma, ASPack, PECompact, MPRESS).
+- Comparação de hash com uma base de executores conhecidos.
+- Arquitetura (x86/x64/ARM64).
 
-### 📊 Relatório HTML
-Dashboard com:
-- Sidebar sticky + TOC navegável
-- Donut SVG + bar chart (severidade e top scanners)
-- Timeline visual de hits (cluster denso = burst suspeito)
-- Sections colapsáveis + search/filter live
-- Multi-monitor screenshots (TODOS os monitores)
-- Lightbox modal pra zoom
-- Print-friendly + responsive
-- Animations sutis, custom scrollbar
+### Relatório HTML
+- Barra lateral fixa com índice e contador por scanner.
+- Gráficos em SVG (severidade e scanners com mais itens).
+- Linha do tempo dos itens.
+- Seções recolhíveis e busca/filtro em tempo real.
+- Capturas de todos os monitores, com visualização ampliada.
+- Estilos de impressão e layout responsivo.
 
-### 🔏 Integridade
-- `--save-tsr` salva snapshot HMAC-assinado
-- `--diff old.tsr` compara com SS anterior, mostra hits novos/sumidos
-- Banner mostra SHA256 do próprio `.exe` pra cara verificar autenticidade
+### Verificação de sessão e integridade
+- `--codigo`: código informado pelo supervisor entra no relatório assinado, evitando reaproveitar relatórios antigos.
+- `--save-tsr` salva um instantâneo assinado por HMAC; `--diff` compara com um anterior.
+- O programa exibe o próprio SHA256 no banner para conferência.
 
-### 🛡️ Privacy
-- **Zero network egress** — nada sai do PC
-- Redação automática de tokens, passwords, emails, CPF, etc.
-- Screenshot pulado se gerenciador de senha estiver aberto
-- Open-source, código auditável
+### Privacidade
+- Execução totalmente local, sem envio de dados pela rede.
+- Mascara automaticamente tokens, senhas, e-mails e CPF no relatório.
+- Não captura a tela se houver gerenciador de senhas aberto.
+- Código aberto e auditável.
 
 ## Uso
 
