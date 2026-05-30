@@ -90,7 +90,7 @@ BANNER = r"""
 
 def print_banner():
     print(f"{RED}{BANNER}{RESET}")
-    print(f"{GREY}  Versão 3.6.0  ·  39 scanners  ·  Detecção de PC formatado pra SS{RESET}\n")
+    print(f"{GREY}  Versão 3.7.0  ·  39 scanners  ·  Matching word-boundary  ·  Suíte de testes{RESET}\n")
     self_hash = report_signing.get_self_hash()
     if self_hash:
         print(f"{GREY}  SHA256 deste exe: {self_hash[:16]}...{self_hash[-16:]}{RESET}")

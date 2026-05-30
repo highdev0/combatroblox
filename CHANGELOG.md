@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.7.0] - 2026-05-30
+
+Corrige a RAIZ dos falsos positivos + primeira suíte de testes.
+
+### Changed
+
+- **Matching agora é word-boundary, não substring** (`matching.py`, novo
+  módulo central). Antes, `_match_keyword` casava qualquer keyword como
+  substring no path/cmdline completo — `argon` casava `argonauts`,
+  `trigon` casava `trigonometria`, `scriptware` casava `scriptwarehouse`.
+  Agora a keyword só casa quando vem delimitada (ponto, barra, espaço,
+  hífen, fim de string): `argon.exe` ✓, `/argon/` ✓, `argonauts` ✗.
+  Era o vetor de FP nº 1 sinalizado na auditoria.
+- Os 4 `_match_keyword` duplicados (scanners, forensics, live_analysis,
+  persistence) agora delegam pro módulo central (DRY).
+
+### Added
+
+- **Primeira suíte de testes** (`tests/test_detection.py`, 9 testes):
+  - executores reais continuam casando
+  - jogos/apps legítimos (Cryptic Studios, Xenoblade, Nihon Falcom,
+    Argonauts, scriptwarehouse) não disparam
+  - regressão: keywords soltas removidas não voltam, MACs Hyper-V fora,
+    process names genéricos fora, APIs Roblox não-HIGH, verdict ignora
+    `meta_only`
+- **CI agora roda `pytest`** além do smoke test de imports.
+
 ## [3.6.1] - 2026-05-30
 
 Auditoria de falsos positivos — patch sem mudança de funcionalidade,

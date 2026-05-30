@@ -75,14 +75,11 @@ def _expand(path: str) -> str:
 
 
 def _match_keyword(text: str) -> tuple[str | None, str | None]:
-    """Retorna (keyword_encontrada, severity) ou (None, None)."""
-    if not text:
-        return None, None
-    lower = text.lower()
-    for keyword, severity in EXECUTOR_KEYWORDS.items():
-        if keyword in lower:
-            return keyword, severity
-    return None, None
+    """Retorna (keyword, severity) do primeiro match, ou (None, None).
+    Delega pro matching central (word-boundary — evita FP de substring
+    tipo 'argon' casar 'argonauts')."""
+    import matching
+    return matching.match_keyword(text)
 
 
 def _result(name: str, description: str, items: list, status: str = None, error: str = None) -> dict:
