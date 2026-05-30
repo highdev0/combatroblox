@@ -1,0 +1,24 @@
+{
+  "_comentario": "Renomeie para signatures.json e coloque ao lado do telador.exe. Estende as listas embutidas sem recompilar. Todas as seções são opcionais. Severidades válidas: high, medium, low.",
+
+  "executor_keywords": {
+    "exemploexec": "high",
+    "outra ferramenta": "medium"
+  },
+
+  "executor_process_names": {
+    "exemploexec.exe": "high"
+  },
+
+  "suspicious_domains": {
+    "exemploexec.gg": "high"
+  },
+
+  "suspicious_folder_names": {
+    "exemploexec": "high"
+  },
+
+  "script_red_flags": {
+    "novafuncaoexploit": "high"
+  }
+}

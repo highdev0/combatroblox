@@ -6,7 +6,15 @@ Severity:
   high   = match direto (quase certeza)
   medium = ferramenta auxiliar ou bypass
   low    = palavra-chave ambígua
+
+As listas embutidas abaixo podem ser ESTENDIDAS sem recompilar, via um
+arquivo signatures.json ao lado do executável (ver load_external_signatures
+no fim do módulo). Útil pra adicionar executor novo entre releases.
 """
+
+import os
+import sys
+import json
 
 EXECUTOR_KEYWORDS = {
     # PC Executors
@@ -1109,3 +1117,71 @@ WER_PATHS = [
     r"%PROGRAMDATA%\Microsoft\Windows\WER\ReportArchive",
     r"%PROGRAMDATA%\Microsoft\Windows\WER\ReportQueue",
 ]
+
+
+# ----------------------------- Assinaturas externas -----------------------------
+
+# Seções aceitas em signatures.json -> dict embutido correspondente.
+_MERGE_TARGETS = {
+    "executor_keywords":      EXECUTOR_KEYWORDS,
+    "executor_process_names": EXECUTOR_PROCESS_NAMES,
+    "suspicious_domains":     SUSPICIOUS_DOMAINS,
+    "suspicious_folder_names": SUSPICIOUS_FOLDER_NAMES,
+    "script_red_flags":       SCRIPT_RED_FLAGS,
+}
+_VALID_SEVERITIES = {"high", "medium", "low"}
+
+
+def _signatures_path() -> str:
+    """signatures.json ao lado do .exe (frozen) ou do módulo (dev)."""
+    if getattr(sys, "frozen", False):
+        base = os.path.dirname(sys.executable)
+    else:
+        base = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base, "signatures.json")
+
+
+def load_external_signatures(path: str = None) -> tuple[int, str | None]:
+    """
+    Mescla signatures.json (se existir) nas listas embutidas, IN-PLACE.
+
+    Formato esperado (todas as seções opcionais):
+        {
+          "executor_keywords":      {"novoexec": "high"},
+          "executor_process_names": {"novoexec.exe": "high"},
+          "suspicious_domains":     {"novoexec.gg": "high"},
+          "suspicious_folder_names":{"novoexec": "high"},
+          "script_red_flags":       {"novafuncao": "high"}
+        }
+
+    Degrada graciosamente: arquivo ausente, JSON inválido, seção ou entrada
+    malformada nunca quebram — apenas são ignorados. Retorna (n_mescladas,
+    erro_ou_None). A mutação é in-place (mesmo objeto que matching.py referencia),
+    e deve ocorrer ANTES do primeiro match_keyword (matching compila sob demanda).
+    """
+    path = path or _signatures_path()
+    if not os.path.isfile(path):
+        return 0, None
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            data = json.load(fh)
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as e:
+        return 0, f"signatures.json ignorado ({e})"
+    if not isinstance(data, dict):
+        return 0, "signatures.json ignorado (raiz não é objeto)"
+
+    added = 0
+    for section_key, target in _MERGE_TARGETS.items():
+        section = data.get(section_key)
+        if not isinstance(section, dict):
+            continue
+        for raw_k, raw_v in section.items():
+            if not isinstance(raw_k, str):
+                continue
+            k = raw_k.lower().strip()
+            sev = str(raw_v).lower().strip()
+            if not k or sev not in _VALID_SEVERITIES:
+                continue
+            target[k] = sev
+            added += 1
+    return added, None

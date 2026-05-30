@@ -31,6 +31,7 @@ import webbrowser
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+import database
 import scanners
 import forensics
 import antievasion
@@ -91,7 +92,7 @@ BANNER = r"""
 
 def print_banner():
     print(f"{RED}{BANNER}{RESET}")
-    print(f"{GREY}  Versão 3.8.2  ·  40 scanners  ·  Prova de SS ao vivo  ·  Overlay/ESP externo{RESET}\n")
+    print(f"{GREY}  Versão 3.9.0  ·  40 scanners  ·  Assinaturas externas (signatures.json){RESET}\n")
     self_hash = report_signing.get_self_hash()
     if self_hash:
         print(f"{GREY}  SHA256 deste exe: {self_hash[:16]}...{self_hash[-16:]}{RESET}")
@@ -379,6 +380,15 @@ def main():
     args = parser.parse_args()
 
     print_banner()
+
+    # Mescla assinaturas externas (signatures.json) antes de qualquer scan.
+    sig_added, sig_err = database.load_external_signatures()
+    if sig_added:
+        import matching
+        matching.invalidate()  # recompila patterns com as assinaturas extras
+        print(f"{CYAN}[SIG]{RESET} {GREY}{sig_added} assinatura(s) extra(s) carregada(s) de signatures.json{RESET}")
+    elif sig_err:
+        print(f"{YELLOW}[SIG]{RESET} {GREY}{sig_err}{RESET}")
 
     if not is_admin():
         print(f"{YELLOW}⚠  AVISO: Não está rodando como administrador.{RESET}")

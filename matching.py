@@ -40,6 +40,13 @@ def _compile():
     return pats
 
 
+def invalidate():
+    """Descarta o cache de patterns. Chamar após mexer em EXECUTOR_KEYWORDS
+    (ex.: depois de mesclar signatures.json) pra forçar recompilação."""
+    global _PATTERNS
+    _PATTERNS = None
+
+
 def match_keyword(text):
     """Retorna (keyword, severity) do primeiro match, ou (None, None)."""
     if not text:

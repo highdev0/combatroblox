@@ -32,6 +32,7 @@ jobs:
       - name: Import smoke test
         run: |
           python -c "import antievasion, capture, command_history, database, diff_tool, discord_cache, forensics, fp_filter, fresh_install, live_analysis, matching, network_scanners, pe_analysis, peripherals, persistence, redaction, report, report_md, report_signing, scanners, telador; print('Smoke imports OK')"
+          python -c "import json; json.load(open('signatures.example.json', encoding='utf-8')); print('signatures.example.json valido')"
 
       - name: Unit tests (detection + anti-false-positive)
         run: |

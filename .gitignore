@@ -22,3 +22,6 @@ dist/
 Thumbs.db
 .vscode/
 .idea/
+
+# Assinaturas externas do usuario (so o .example vai pro repo)
+signatures.json
