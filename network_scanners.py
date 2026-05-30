@@ -8,7 +8,6 @@ Network forensics:
 import os
 import re
 import subprocess
-from datetime import datetime
 
 from database import SUSPICIOUS_DOMAINS, EXECUTOR_PROCESS_NAMES
 
@@ -156,7 +155,7 @@ def scan_dns_cache() -> dict:
             continue
 
         items.append(_item(
-            label=domain, detail=f"Domínio cacheado no DNS local",
+            label=domain, detail="Domínio cacheado no DNS local",
             severity=severity, matched=matched_kw,
         ))
 

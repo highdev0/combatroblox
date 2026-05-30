@@ -91,7 +91,7 @@ BANNER = r"""
 
 def print_banner():
     print(f"{RED}{BANNER}{RESET}")
-    print(f"{GREY}  Versão 3.8.0  ·  40 scanners  ·  Prova de SS ao vivo  ·  Overlay/ESP externo{RESET}\n")
+    print(f"{GREY}  Versão 3.8.2  ·  40 scanners  ·  Prova de SS ao vivo  ·  Overlay/ESP externo{RESET}\n")
     self_hash = report_signing.get_self_hash()
     if self_hash:
         print(f"{GREY}  SHA256 deste exe: {self_hash[:16]}...{self_hash[-16:]}{RESET}")
@@ -472,7 +472,6 @@ def main():
     # PE analysis dos executáveis encontrados
     if not args.no_pe:
         print(f"{CYAN}[PE]{RESET} Analisando PE headers + hashes dos executáveis...", end=" ", flush=True)
-        before_pe = sum(len(f["items"]) for f in findings)
         findings = pe_analysis.enrich_findings_with_pe(findings)
         enriched = sum(1 for f in findings for i in f["items"] if i.get("pe_info"))
         print(f"{GREEN}{enriched} executável(is) analisado(s){RESET}")

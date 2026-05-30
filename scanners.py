@@ -11,8 +11,6 @@ Scanners individuais. Cada função retorna um dict no formato:
 """
 
 import os
-import sys
-import json
 import struct
 import shutil
 import sqlite3
@@ -22,10 +20,8 @@ import getpass
 import socket
 import codecs
 from datetime import datetime, timedelta
-from pathlib import Path
 
 from database import (
-    EXECUTOR_KEYWORDS,
     EXECUTOR_PROCESS_NAMES,
     SUSPICIOUS_DOMAINS,
     SUSPICIOUS_FOLDER_NAMES,
@@ -35,7 +31,6 @@ from database import (
     ROBLOX_LOG_PATTERNS,
     SCRIPT_SEARCH_PATHS,
     SCRIPT_SEARCH_MAX_DEPTH,
-    SCRIPT_EXTENSIONS,
     SCRIPT_RED_FLAGS,
     CLEANER_NAMES,
     BLOXSTRAP_PATHS,
@@ -169,8 +164,10 @@ def scan_prefetch() -> dict:
     for fname in files:
         if not fname.lower().endswith(".pf"):
             continue
-        # Nome do .pf é tipo "KRNL.EXE-1A2B3C4D.pf"
-        exe_name = fname.split("-")[0]
+        # Formato: "<NOME.EXE>-<HASH8>.pf". BUG corrigido: split("-")[0]
+        # truncava nomes com hífen (wave-bootstrapper.exe -> "wave", que
+        # não casa). rsplit tira só o hash final, preservando o nome.
+        exe_name = fname[:-3].rsplit("-", 1)[0]
         keyword, severity = _match_keyword(exe_name)
         if not keyword:
             continue

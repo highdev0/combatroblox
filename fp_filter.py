@@ -16,7 +16,6 @@ Cada item ganha campos:
 """
 
 import os
-import re
 from datetime import datetime, timedelta
 
 

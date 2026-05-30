@@ -46,7 +46,7 @@ def generate_markdown_report(findings, sys_info,
     lines.append("")
 
     if verdict:
-        lines.append(f"### Stats")
+        lines.append("### Stats")
         lines.append(f"🔴 **{verdict.get('high', 0)}** high · "
                      f"🟠 **{verdict.get('medium', 0)}** medium · "
                      f"🟡 **{verdict.get('low', 0)}** low")

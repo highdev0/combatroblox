@@ -12,8 +12,6 @@ import struct
 import subprocess
 from datetime import datetime, timedelta
 
-from database import EXECUTOR_KEYWORDS
-
 try:
     import winreg
     HAS_WINREG = True
@@ -353,19 +351,21 @@ def scan_jumplists():
         except OSError:
             ts = ""
 
-        seen = set()
-        for keyword, severity in EXECUTOR_KEYWORDS.items():
-            if keyword in text.lower() and keyword not in seen:
-                seen.add(keyword)
-                # Tenta achar contexto (10 chars antes e depois)
-                idx = text.lower().find(keyword)
-                ctx = text[max(0, idx - 20):idx + len(keyword) + 30]
-                ctx = "".join(c if 32 <= ord(c) < 127 else "·" for c in ctx)
-                items.append(_item(
-                    label=f"{fname} ({severity.upper()})",
-                    detail=f"contexto: ...{ctx}...",
-                    severity=severity, matched=keyword, timestamp=ts,
-                ))
+        # Usa o matching central (word-boundary) em vez de substring manual —
+        # senão este loop reintroduzia o FP que o matching.py corrige
+        # (ex.: 'argon' casando 'argonauts'). Um match por arquivo já flagga.
+        keyword, severity = _match_keyword(text)
+        if keyword:
+            idx = text.lower().find(keyword)
+            if idx < 0:
+                idx = 0
+            ctx = text[max(0, idx - 20):idx + len(keyword) + 30]
+            ctx = "".join(c if 32 <= ord(c) < 127 else "·" for c in ctx)
+            items.append(_item(
+                label=f"{fname} ({severity.upper()})",
+                detail=f"contexto: ...{ctx}...",
+                severity=severity, matched=keyword, timestamp=ts,
+            ))
 
     return _result("JumpLists (forense)",
                    "Arquivos recentes registrados por cada aplicação", items)

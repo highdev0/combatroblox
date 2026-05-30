@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.8.2] - 2026-05-30
+
+Caça a bugs — varredura com pyflakes + revisão manual.
+
+### Fixed
+
+- **Prefetch perdia executores com hífen no nome.** `fname.split("-")[0]`
+  truncava `wave-bootstrapper.exe-1A2B.pf` para `"wave"` (que, com o
+  matching word-boundary, não casa nada). Trocado por
+  `fname[:-3].rsplit("-", 1)[0]`, que remove só o hash final e preserva
+  o nome. Agora `wave-bootstrapper`, `xeno-bootstrapper`, etc. são pegos.
+- **JumpLists tinha substring match residual.** `scan_jumplists` iterava
+  `EXECUTOR_KEYWORDS` com `if kw in text` próprio — escapou da
+  centralização word-boundary e reintroduzia FP (`argon`→`argonauts`).
+  Agora delega pro `match_keyword` central.
+
+### Removed (limpeza — pyflakes)
+- Dead code: `color` (report) e `before_pe` (telador), órfãos após
+  refactors anteriores.
+- 2 f-strings sem placeholder (cosmético).
+- 6 imports não usados (`EXECUTOR_KEYWORDS` ficou órfão nos módulos que
+  passaram a delegar pro matching central; `re`, `datetime`, `sys`,
+  `json`, `pathlib.Path` soltos).
+
+### Verified
+- pyflakes: 0 undefined names, 0 imports unused, 0 f-strings vazias.
+- Run completo (40 scanners) sem traceback. 14 testes passando.
+
 ## [3.8.1] - 2026-05-30
 
 Frontend — passe de legibilidade (sóbrio, sem efeito gratuito).
