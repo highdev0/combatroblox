@@ -363,7 +363,126 @@ def scan_process_tree() -> dict:
                    items)
 
 
+# ============================ Overlay / ESP externo ============================
+
+# Processos que legitimamente desenham overlay click-through (NÃO são cheat).
+OVERLAY_WHITELIST = {
+    # Comunicação
+    "discord.exe", "discordcanary.exe", "discordptb.exe", "discorddevelopment.exe",
+    # NVIDIA / AMD / Intel
+    "nvcontainer.exe", "nvidia share.exe", "nvidia web helper.exe",
+    "nvidiaoverlay.exe", "amddvr.exe", "radeonsoftware.exe",
+    # Captura / streaming
+    "obs64.exe", "obs32.exe", "obs.exe", "streamlabs obs.exe",
+    "xsplit.core.exe", "action.exe",
+    # Steam / launchers
+    "steam.exe", "gameoverlayui.exe", "steamwebhelper.exe",
+    "epicgameslauncher.exe", "galaxyclient.exe",
+    # Monitoramento / RGB
+    "rtss.exe", "msiafterburner.exe", "rivatunerstatisticsserver.exe",
+    "nahimicsvc.exe", "nahimic3.exe", "lghub.exe", "lghub_agent.exe",
+    "razer synapse.exe", "icue.exe", "wallpaper32.exe", "wallpaper64.exe",
+    # Windows / shell (overlays nativos: Game Bar, IME, notificações, snip)
+    "explorer.exe", "textinputhost.exe", "applicationframehost.exe",
+    "shellexperiencehost.exe", "startmenuexperiencehost.exe",
+    "searchhost.exe", "searchapp.exe", "gamebar.exe", "gamebarft.exe",
+    "xboxgamebar.exe", "snippingtool.exe", "screenclippinghost.exe",
+    "lockapp.exe", "peopleexperiencehost.exe", "systemsettings.exe",
+    # Acessibilidade / utilidades comuns
+    "magnify.exe", "narrator.exe", "powertoys.exe", "powertoys.awake.exe",
+    "flow.launcher.exe", "translucenttb.exe", "f.lux.exe", "flux.exe",
+    "1password.exe", "bitwarden.exe", "everything.exe",
+}
+
+# Extended window styles (Win32)
+GWL_EXSTYLE        = -20
+WS_EX_LAYERED      = 0x00080000
+WS_EX_TRANSPARENT  = 0x00000020
+WS_EX_TOPMOST      = 0x00000008
+
+
+def scan_overlay_windows() -> dict:
+    """
+    Detecta janelas de OVERLAY click-through: LAYERED + TRANSPARENT + TOPMOST.
+    Essa combinação = janela invisível ao clique desenhada por cima de tudo —
+    assinatura clássica de ESP/radar/aimbot visual externo (que não injeta DLL).
+
+    Whitelist generosa cobre overlays legítimos (Discord, NVIDIA, Steam, OBS,
+    RTSS, Game Bar, etc.). O resto vira MEDIUM (pode haver overlay legítimo
+    desconhecido — não é prova, é pista pra revisar).
+    """
+    if not HAS_PSUTIL:
+        return _result("Overlay / ESP externo", "Janelas overlay click-through", [],
+                       error="psutil não instalado")
+
+    try:
+        user32 = ctypes.windll.user32
+    except (AttributeError, OSError):
+        return _result("Overlay / ESP externo", "Janelas overlay click-through", [],
+                       error="user32 indisponível (não é Windows?)")
+
+    items = []
+    seen_pids = set()
+
+    EnumWindowsProc = ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, ctypes.c_void_p)
+
+    def callback(hwnd, _lparam):
+        try:
+            if not user32.IsWindowVisible(hwnd):
+                return True
+            ex = user32.GetWindowLongW(hwnd, GWL_EXSTYLE) & 0xFFFFFFFF
+            # Assinatura de overlay de cheat: invisível ao clique + por cima
+            if not (ex & WS_EX_LAYERED and ex & WS_EX_TRANSPARENT and ex & WS_EX_TOPMOST):
+                return True
+
+            pid = wintypes.DWORD()
+            user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+            pid_val = pid.value
+            if pid_val in seen_pids:
+                return True
+
+            try:
+                pname = psutil.Process(pid_val).name().lower()
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pname = "?"
+
+            if pname in OVERLAY_WHITELIST:
+                return True
+
+            seen_pids.add(pid_val)
+
+            # Título da janela (contexto)
+            length = user32.GetWindowTextLengthW(hwnd)
+            title = ""
+            if length > 0:
+                buf = ctypes.create_unicode_buffer(length + 1)
+                user32.GetWindowTextW(hwnd, buf, length + 1)
+                title = buf.value or ""
+
+            items.append(_item(
+                label=f"Overlay click-through: {pname}",
+                detail=f"PID {pid_val} · janela invisível ao clique sobreposta "
+                       f"(LAYERED+TRANSPARENT+TOPMOST)"
+                       + (f" · título: '{title}'" if title else " · sem título"),
+                severity="medium", matched=f"overlay:{pname}",
+            ))
+        except Exception:
+            pass
+        return True
+
+    try:
+        user32.EnumWindows(EnumWindowsProc(callback), 0)
+    except Exception as e:
+        return _result("Overlay / ESP externo", "Janelas overlay click-through", [],
+                       error=str(e))
+
+    return _result("Overlay / ESP externo",
+                   "Janelas overlay invisíveis ao clique sobre a tela (ESP/radar externo)",
+                   items)
+
+
 ALL_LIVE_ANALYSIS_SCANNERS = [
     scan_roblox_dll_injection,
     scan_process_tree,
+    scan_overlay_windows,
 ]

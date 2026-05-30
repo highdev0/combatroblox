@@ -116,3 +116,43 @@ def test_verdict_ignores_meta_only():
     assert v["score"] == 0, f"meta_only somou score: {v['score']}"
     assert v["low"] == 0, "meta_only contou como LOW"
     assert v["verdict"] == "LIMPO"
+
+
+# --------------------------- Prova de SS ao vivo (#1) ---------------------------
+
+def test_session_render_with_code():
+    import report
+    info = {"session_id": "A1B2C3D4", "session_code": "SUP-9988", "scan_time": "2026-05-30 12:00:00"}
+    html = report._render_session(info, "deadbeef" * 8)
+    assert "SUP-9988" in html and "A1B2C3D4" in html
+    assert "código informado" in html  # estado verificado
+
+
+def test_session_render_without_code_warns():
+    import report
+    info = {"session_id": "A1B2C3D4", "session_code": "", "scan_time": "x"}
+    html = report._render_session(info, "")
+    assert "NÃO verificada" in html  # avisa que faltou código
+
+
+def test_session_not_shown_in_sysinfo_table():
+    import report
+    info = {"host": "pc", "session_id": "X", "session_code": "Y"}
+    sys_html = report._render_system(info)
+    # session_* têm card próprio, não devem poluir a tabela de sistema
+    assert "session_id" not in sys_html and "session_code" not in sys_html
+
+
+# --------------------------- Overlay / ESP externo (#4) ---------------------------
+
+def test_overlay_scanner_runs():
+    import live_analysis
+    r = live_analysis.scan_overlay_windows()
+    assert r["status"] in ("clean", "suspicious", "error")
+    assert "name" in r and "items" in r
+
+
+def test_overlay_whitelist_covers_common_apps():
+    import live_analysis
+    for app in ("discord.exe", "steam.exe", "obs64.exe", "nvcontainer.exe", "explorer.exe"):
+        assert app in live_analysis.OVERLAY_WHITELIST, f"{app} deveria estar na whitelist de overlay"
