@@ -34,6 +34,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import database
 import scanners
 import forensics
+import extra_forensics
 import antievasion
 import persistence
 import live_analysis
@@ -94,7 +95,7 @@ BANNER = r"""
 def print_banner():
     print(f"{AMBER}{BANNER}{RESET}")
     print(f"{GREEN}  >_ {RESET}{GREY}roblox screenshare · análise forense local{RESET}")
-    print(f"{GREY}  v3.10.0  ·  40 scanners  ·  100% local{RESET}\n")
+    print(f"{GREY}  v3.11.0  ·  44 scanners  ·  100% local{RESET}\n")
     self_hash = report_signing.get_self_hash()
     if self_hash:
         print(f"{GREY}  SHA256 deste exe: {self_hash[:16]}...{self_hash[-16:]}{RESET}")
@@ -146,6 +147,7 @@ def assemble_scanners(skip_forensics: bool, skip_antievasion: bool,
         chain.extend(antievasion.ALL_ANTIEVASION_SCANNERS)
     if not skip_forensics:
         chain.extend(forensics.ALL_FORENSIC_SCANNERS)
+        chain.extend(extra_forensics.ALL_EXTRA_FORENSIC_SCANNERS)
     # Network + Discord + Fresh install — sempre incluídos no modo full
     chain.extend(network_scanners.ALL_NETWORK_SCANNERS)
     chain.extend(discord_cache.ALL_DISCORD_SCANNERS)

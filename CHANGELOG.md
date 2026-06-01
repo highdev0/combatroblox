@@ -2,6 +2,37 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.11.0] - 2026-05-30
+
+Quatro fontes forenses adicionais (extra_forensics.py) para pegar quem
+tenta limpar os rastros antes da SS. São fontes que cleaners comuns
+raramente tocam. 44 scanners no total.
+
+### Added
+
+- **ShimCache (AppCompatCache):** lê o blob do registry com os
+  executáveis vistos pelo subsistema de compatibilidade. Fonte separada
+  de Prefetch/Amcache/BAM — sobrevive à limpa dessas. (Precisa admin.)
+- **SRUM:** o System Resource Usage Monitor guarda uso de rede/CPU por
+  programa nos últimos ~30 dias. Mesmo apagando o executável, o nome
+  costuma permanecer. (Arquivo geralmente locado pelo serviço; quando
+  acessível, é evidência forte.)
+- **Hash de scripts conhecidos:** calcula SHA1 do conteúdo dos
+  `.lua`/`.luau`/`.txt` e confronta com `KNOWN_SCRIPT_HASHES`. Pega hub
+  público renomeado/comentado cujo conteúdo ainda bate hash. (Base vazia
+  por design — popular com amostras reais.)
+- **Anti-forense reforçada:** detecta uso de Bleachbit/CCleaner nas
+  últimas 24h, a combinação "Prefetch + UserAssist + Recent vazios ao
+  mesmo tempo" (assinatura de cleaner pré-SS), e limpeza do log de
+  Security (evento 1102).
+
+### Notes
+
+- Todos exigem cobertura total apenas com privilégio de administrador;
+  sem ele, degradam para skip sem quebrar.
+- ShimCache otimizado para extrair só tokens de executável (de 7s para
+  0,2s). 20 testes no total (4 novos).
+
 ## [3.10.0] - 2026-05-30
 
 Identidade visual própria: terminal forense.

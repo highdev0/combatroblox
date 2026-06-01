@@ -193,3 +193,39 @@ def test_external_signatures_invalid_json_degrades(tmp_path):
     p.write_text("{ isto nao e json valido ", encoding="utf-8")
     added, err = database.load_external_signatures(str(p))
     assert added == 0 and err is not None  # avisa mas não quebra
+
+
+# --------------------------- Forense extra (Tier 1) ---------------------------
+
+def test_extra_forensic_scanners_run():
+    """Cada scanner novo retorna o contrato esperado, sem crashar."""
+    import extra_forensics
+    for fn in extra_forensics.ALL_EXTRA_FORENSIC_SCANNERS:
+        r = fn()
+        assert isinstance(r, dict), f"{fn.__name__} não retornou dict"
+        assert r.get("status") in ("clean", "suspicious", "error"), f"{fn.__name__} status inválido"
+        assert "items" in r and isinstance(r["items"], list)
+        assert "name" in r
+
+
+def test_extra_forensics_registered():
+    """Os 4 scanners do Tier 1 estão na lista."""
+    import extra_forensics
+    names = {fn.__name__ for fn in extra_forensics.ALL_EXTRA_FORENSIC_SCANNERS}
+    assert names == {"scan_shimcache", "scan_srum", "scan_script_hashes", "scan_anti_forensics"}
+
+
+def test_script_hash_match_logic(tmp_path, monkeypatch):
+    """Plantando um hash conhecido, um arquivo com aquele conteúdo é pego."""
+    import extra_forensics, hashlib
+    conteudo = b"-- script qualquer renomeado\nlocal x = 1\n" * 5
+    sha1 = hashlib.sha1(conteudo).hexdigest()
+    f = tmp_path / "anotacoes.lua"
+    f.write_bytes(conteudo)
+
+    monkeypatch.setattr(extra_forensics, "KNOWN_SCRIPT_HASHES", {sha1: "Hub Fictício vX"})
+    monkeypatch.setattr(extra_forensics, "SCRIPT_HASH_PATHS", [str(tmp_path)])
+
+    r = extra_forensics.scan_script_hashes()
+    assert r["status"] == "suspicious"
+    assert any("Hub Fictício vX" in it["label"] for it in r["items"])
