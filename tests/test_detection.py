@@ -229,3 +229,62 @@ def test_script_hash_match_logic(tmp_path, monkeypatch):
     r = extra_forensics.scan_script_hashes()
     assert r["status"] == "suspicious"
     assert any("Hub Fictício vX" in it["label"] for it in r["items"])
+
+
+# --------------------------- Parser de PE (pe_analysis) ---------------------------
+
+def _build_minimal_pe(path, machine=0x8664, sections=(".text",), timestamp=1700000000):
+    """Monta um PE mínimo, mas estruturalmente válido, em disco."""
+    import struct
+    pe_off = 0x80
+    buf = bytearray(b"\x00" * pe_off)
+    buf[0:2] = b"MZ"
+    struct.pack_into("<I", buf, 0x3C, pe_off)         # e_lfanew -> offset do PE
+    buf += b"PE\x00\x00"                               # assinatura
+    # COFF: machine, num_sections, timestamp, ptr_symtab, num_symbols, opt_size, chars
+    buf += struct.pack("<HHIIIHH", machine, len(sections), timestamp, 0, 0, 0, 0)
+    for name in sections:                              # section headers (40 bytes cada)
+        nm = name.encode("latin-1")[:8].ljust(8, b"\x00")
+        buf += nm + b"\x00" * 32
+    with open(path, "wb") as fh:
+        fh.write(bytes(buf))
+    return str(path)
+
+
+def test_parse_pe_x64_basic(tmp_path):
+    import pe_analysis
+    p = _build_minimal_pe(tmp_path / "fake.exe", machine=0x8664, sections=(".text", ".data"))
+    pe = pe_analysis.parse_pe_header(p)
+    assert pe["is_pe"] is True
+    assert pe["machine"] == "x64"
+    assert ".text" in pe["sections"] and ".data" in pe["sections"]
+    assert pe["is_packed"] is False
+    assert pe["compile_timestamp"]  # timestamp válido foi parseado
+
+
+def test_parse_pe_x86(tmp_path):
+    import pe_analysis
+    p = _build_minimal_pe(tmp_path / "x86.exe", machine=0x14C)
+    assert pe_analysis.parse_pe_header(p)["machine"] == "x86"
+
+
+def test_parse_pe_detects_packer(tmp_path):
+    import pe_analysis
+    p = _build_minimal_pe(tmp_path / "packed.exe", sections=(".vmp0",))
+    pe = pe_analysis.parse_pe_header(p)
+    assert pe["is_packed"] is True
+    assert pe["packer_name"] == "VMProtect"
+
+
+def test_parse_pe_rejects_non_pe(tmp_path):
+    import pe_analysis
+    p = tmp_path / "nao.txt"
+    p.write_bytes(b"isto nao e um executavel " * 20)
+    assert pe_analysis.parse_pe_header(str(p))["is_pe"] is False
+
+
+def test_compute_sha256(tmp_path):
+    import pe_analysis, hashlib
+    p = tmp_path / "f.bin"
+    p.write_bytes(b"conteudo de teste")
+    assert pe_analysis.compute_sha256(str(p)) == hashlib.sha256(b"conteudo de teste").hexdigest()

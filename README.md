@@ -18,7 +18,7 @@
 [![License](https://img.shields.io/badge/License-MIT-3fbf7f?style=for-the-badge)](LICENSE)
 [![Last Commit](https://img.shields.io/github/last-commit/highdev0/combatroblox?style=for-the-badge&color=888)](https://github.com/highdev0/combatroblox/commits/main)
 
-40 scanners em paralelo · 542 assinaturas de detecção · execução local, sem envio de dados
+44 scanners em paralelo · 542 assinaturas de detecção · execução local, sem envio de dados
 
 </div>
 
@@ -47,7 +47,8 @@ Pra distribuir pro usuário final: zipe `telador.exe` + `INICIAR.bat`, manda no 
 | Comportamento | Histórico do PowerShell, Win+R, barra do Explorer, macros de mouse (G HUB, Razer, X-Mouse) |
 | Rede | Conexões TCP/UDP, cache de DNS, arquivo hosts, cache do Discord |
 | Anti-evasão | VM (VMware/VBox/Hyper-V/QEMU), Sandboxie, relógio alterado, formatação recente |
-| Forense | Amcache, BAM, JumpLists, análise PE com comparação de hash |
+| Forense | Amcache, BAM, JumpLists, ShimCache, SRUM, análise PE com comparação de hash, hash de scripts conhecidos |
+| Anti-forense | Detecção de formatação recente e de fontes históricas zeradas em conjunto; limpeza do log de Security |
 
 ### Filtro de falsos positivos
 - Detecta ambiente de desenvolvimento (Visual Studio, JetBrains, VS Code) e rebaixa ferramentas como Cheat Engine e IDA.
