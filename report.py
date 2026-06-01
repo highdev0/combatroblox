@@ -2140,6 +2140,61 @@ def generate_html_report(findings: list[dict], sys_info: dict,
     }
     ::-webkit-scrollbar-thumb:hover { background: #4a4326; }
     *:focus-visible { outline: 2px solid var(--c-amber); }
+
+    /* ================================================================
+       === Animações de terminal (temáticas, contidas)
+       Só o que um terminal faz de verdade: digitar, cursor piscando,
+       dots acendendo. Nada de gradiente/glow/shimmer. Tudo de entrada
+       (uma vez), exceto o cursor. Respeita prefers-reduced-motion.
+       ================================================================ */
+    @media (prefers-reduced-motion: no-preference) {
+
+        /* Título "TELADOR" digitado uma vez no load */
+        @keyframes typing { from { width: 0; } to { width: 7ch; } }
+        .term-body .typed {
+            display: inline-block; overflow: hidden; white-space: nowrap;
+            vertical-align: bottom;
+            width: 7ch;
+            animation: typing 0.55s steps(7, end) 0.15s both;
+        }
+
+        /* Cursor de bloco piscando ao lado do título (assinatura de terminal) */
+        @keyframes blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+        .term-cursor {
+            display: inline-block; width: 9px; height: 1.05em;
+            background: var(--c-amber); margin-left: 3px;
+            vertical-align: text-bottom;
+            animation: blink 1.1s step-end infinite;
+        }
+
+        /* Os três dots da barra acendem em sequência */
+        @keyframes dotOn { from { opacity: 0; transform: scale(0.4); }
+                           to   { opacity: 1; transform: scale(1); } }
+        .term-bar .term-dot { animation: dotOn 0.25s var(--ease-out) both; }
+        .term-bar .td-r { animation-delay: 0.00s; }
+        .term-bar .td-y { animation-delay: 0.12s; }
+        .term-bar .td-g { animation-delay: 0.24s; }
+        .term-bar-title { animation: drift 0.4s 0.36s var(--ease-out) both; }
+
+        /* Linhas da sidebar entram em cascata curta (boot-like) */
+        .sidebar .nav-link { animation: drift 0.3s var(--ease-out) both; }
+        .sidebar .nav-link:nth-child(1) { animation-delay: 0.02s; }
+        .sidebar .nav-link:nth-child(2) { animation-delay: 0.05s; }
+        .sidebar .nav-link:nth-child(3) { animation-delay: 0.08s; }
+        .sidebar .nav-link:nth-child(4) { animation-delay: 0.11s; }
+        .sidebar .nav-link:nth-child(5) { animation-delay: 0.14s; }
+        .sidebar .nav-link:nth-child(n+6) { animation-delay: 0.17s; }
+
+        /* Barras do gráfico preenchem da esquerda */
+        @keyframes barFill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+        .bar-fill { transform-origin: left; animation: barFill 0.6s var(--ease-out) 0.2s both; }
+    }
+
+    /* Sem animação para quem pede movimento reduzido: cursor estático visível */
+    @media (prefers-reduced-motion: reduce) {
+        .term-body .typed { width: auto; }
+        .term-cursor { display: none; }
+    }
     """
 
     html_doc = f"""<!DOCTYPE html>
@@ -2161,7 +2216,7 @@ def generate_html_report(findings: list[dict], sys_info: dict,
             <span class="term-bar-title">telador — relatório de verificação</span>
         </div>
         <div class="term-body">
-            <div class="h1line">TELADOR</div>
+            <div class="h1line"><span class="typed">TELADOR</span><span class="term-cursor" aria-hidden="true"></span></div>
             <div class="sub">{_escape(sys_info.get('host', '?'))} · {_escape(sys_info.get('scan_time', ''))}</div>
         </div>
     </header>

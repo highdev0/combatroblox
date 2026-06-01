@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.11.4] - 2026-06-01
+
+Animações temáticas de terminal no relatório (sóbrias, de entrada).
+
+### Changed
+
+- O cabeçalho do relatório agora "digita" o título TELADOR ao abrir, com
+  um cursor de bloco piscando ao lado, e os três pontos da barra de
+  terminal acendem em sequência. As linhas da barra lateral entram em
+  cascata curta e as barras do gráfico preenchem da esquerda.
+- Todas são animações de entrada (rodam uma vez), exceto o cursor.
+  Nada de gradiente, glow ou brilho pulsante — só o que um terminal faz.
+- Respeita `prefers-reduced-motion`: quem configurou movimento reduzido
+  vê o relatório estático, sem digitação nem cursor.
+
+Sem mudança de funcionalidade.
+
 ## [3.11.3] - 2026-06-01
 
 Correção de bug encontrada por auditoria, e teste que a trava.
