@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.11.2] - 2026-06-01
+
+Reduz falsos positivos de antivírus no executável (empacotamento).
+
+### Changed
+
+- Build agora embute metadados no `.exe` via `--version-file`
+  (nome do produto, versão, descrição, autor, link do repo). Um
+  executável identificável é menos suspeito para a heurística de
+  antivírus do que um binário anônimo, e a informação aparece em
+  Propriedades > Detalhes no Windows.
+- Build passa a usar `--noupx` para nunca comprimir com UPX (compressão
+  que aumenta a taxa de falso positivo).
+
+### Docs
+
+- README ganhou a seção "É seguro? Sobre alertas de antivírus",
+  explicando o falso positivo do PyInstaller e mostrando como rodar
+  direto do código-fonte para quem preferir não usar o `.exe`.
+- Corrigida a contagem de scanners no título da seção (44, 11 categorias).
+
+Sem mudança de funcionalidade ou de detecção.
+
 ## [3.11.1] - 2026-06-01
 
 Correção de falsos positivos introduzidos no scan_anti_forensics (v3.11.0).

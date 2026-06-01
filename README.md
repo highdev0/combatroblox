@@ -32,9 +32,39 @@
 
 Pra distribuir pro usuário final: zipe `telador.exe` + `INICIAR.bat`, manda no Discord, instrui dois cliques.
 
+## É seguro? Sobre alertas de antivírus
+
+Alguns antivírus podem marcar o `telador.exe` como "dropper" ou suspeito.
+**É um falso positivo conhecido**, não malware. Acontece porque o executável
+é gerado com PyInstaller, que empacota o Python e se descompacta numa pasta
+temporária ao rodar — esse comportamento de "extrair e executar" dispara a
+heurística de alguns antivírus. É um problema documentado de qualquer programa
+Python distribuído como `.exe`.
+
+Como conferir você mesmo:
+
+- **VirusTotal:** a maioria esmagadora dos antivírus (incluindo o Windows
+  Defender) reporta o arquivo como limpo; só alguns motores heurísticos
+  reclamam.
+- **Código aberto:** todo o código está neste repositório. O programa só
+  **lê** informação do sistema — não modifica nada, não instala nada, não
+  envia nada pela rede.
+- **Rode direto do código-fonte** (sem o `.exe`), se preferir não confiar no
+  binário:
+
+  ```bash
+  git clone https://github.com/highdev0/combatroblox
+  cd combatroblox
+  pip install -r requirements.txt
+  python telador.py
+  ```
+
+- **Confira o SHA256:** o programa mostra o próprio hash no banner ao abrir;
+  compare com o da release oficial.
+
 ## O que faz
 
-### Scanners (40, em 10 categorias)
+### Scanners (44, em 11 categorias)
 
 | Categoria | Cobertura |
 |---|---|

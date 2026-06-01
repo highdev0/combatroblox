@@ -55,6 +55,8 @@ python -m PyInstaller ^
     --onefile ^
     --console ^
     --name telador ^
+    --noupx ^
+    --version-file version_info.txt ^
     --hidden-import psutil ^
     --hidden-import winreg ^
     --hidden-import sqlite3 ^
