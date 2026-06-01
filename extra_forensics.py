@@ -20,7 +20,7 @@ import os
 import re
 import hashlib
 import subprocess
-from datetime import datetime, timedelta
+from datetime import datetime
 
 try:
     import winreg
@@ -292,27 +292,15 @@ def scan_script_hashes() -> dict:
 
 
 # ============================ 4. Anti-forense reforçada ============================
-
-# Indicadores de cleaner usado pré-SS. Combinado, é forte.
-
-BLEACHBIT_PATHS = [
-    r"%APPDATA%\BleachBit",
-    r"%LOCALAPPDATA%\BleachBit",
-    r"%PROGRAMFILES%\BleachBit",
-    r"%PROGRAMFILES(X86)%\BleachBit",
-]
-CCLEANER_PATHS = [
-    r"%PROGRAMFILES%\CCleaner",
-    r"%PROGRAMFILES(X86)%\CCleaner",
-    r"%LOCALAPPDATA%\CCleaner",
-]
-
-
-def _path_mtime(path):
-    try:
-        return datetime.fromtimestamp(os.path.getmtime(path))
-    except OSError:
-        return None
+#
+# Foca em DOIS sinais que não duplicam o scan_cleaners existente e têm baixo
+# falso positivo quando calibrados:
+#   (a) Prefetch + Recent + UserAssist TODOS vazios ao mesmo tempo.
+#   (b) Log de Security limpo (evento 1102).
+#
+# Nota de FP: detecção de Bleachbit/CCleaner por mtime de pasta foi REMOVIDA —
+# o mtime muda por atualização automática (não só por uso), CCleaner é comum
+# demais pra ser sinal forte, e o scan_cleaners já cobre cleaner instalado.
 
 
 def _count_dir(path, ext=None):
@@ -325,123 +313,111 @@ def _count_dir(path, ext=None):
     return len(files)
 
 
-def scan_anti_forensics() -> dict:
-    """
-    Sinais de anti-forense recente:
-      - Bleachbit/CCleaner com atividade nos últimos 24h
-      - Combinação 'Prefetch + UserAssist + Recent todos vazios juntos'
-        (assinatura de cleaner usado pré-SS)
-      - Event Log de Security limpo recentemente (event ID 1102)
-    """
-    items = []
-    now = datetime.now()
-    recently = now - timedelta(hours=24)
-
-    # --- Bleachbit / CCleaner com atividade recente ---
-    cleaner_signals = []
-    for paths, name in ((BLEACHBIT_PATHS, "BleachBit"), (CCLEANER_PATHS, "CCleaner")):
-        for tpl in paths:
-            p = os.path.expandvars(tpl)
-            if not os.path.isdir(p):
-                continue
-            mt = _path_mtime(p)
-            if mt and mt > recently:
-                items.append(_item(
-                    label=f"{name} com atividade nas últimas 24h",
-                    detail=f"{p}  ·  mtime {mt.strftime('%Y-%m-%d %H:%M:%S')}",
-                    severity="high", matched=f"recent-cleaner:{name.lower()}",
-                    timestamp=mt.strftime("%Y-%m-%d %H:%M:%S"),
-                ))
-                cleaner_signals.append(name)
-                break  # uma entrada por programa basta
-
-    # --- Combinação suspeita: 3 fontes históricas vazias simultâneas ---
-    pf_count = _count_dir(r"C:\Windows\Prefetch", ext=".pf")
-    recent_dir = os.path.expandvars(r"%APPDATA%\Microsoft\Windows\Recent")
-    rec_count = _count_dir(recent_dir)
-
-    # UserAssist: heurística simples — contar values
-    ua_count = None
-    if HAS_WINREG:
-        ua_count = 0
-        try:
-            base = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
-                                   r"Software\Microsoft\Windows\CurrentVersion\Explorer\UserAssist")
+def _count_userassist():
+    """Conta values do UserAssist. None se não deu pra ler."""
+    if not HAS_WINREG:
+        return None
+    total = 0
+    try:
+        base = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
+                               r"Software\Microsoft\Windows\CurrentVersion\Explorer\UserAssist")
+    except OSError:
+        return None
+    try:
+        i = 0
+        while True:
             try:
-                i = 0
+                guid = winreg.EnumKey(base, i)
+            except OSError:
+                break
+            i += 1
+            try:
+                count_k = winreg.OpenKey(base, f"{guid}\\Count")
+                j = 0
                 while True:
                     try:
-                        guid = winreg.EnumKey(base, i)
+                        winreg.EnumValue(count_k, j)
                     except OSError:
                         break
-                    i += 1
-                    try:
-                        count_k = winreg.OpenKey(base, f"{guid}\\Count")
-                        j = 0
-                        while True:
-                            try:
-                                winreg.EnumValue(count_k, j)
-                            except OSError:
-                                break
-                            j += 1
-                        ua_count += j
-                        winreg.CloseKey(count_k)
-                    except OSError:
-                        continue
-            finally:
-                winreg.CloseKey(base)
-        except OSError:
-            ua_count = None
+                    j += 1
+                total += j
+                winreg.CloseKey(count_k)
+            except OSError:
+                continue
+    finally:
+        winreg.CloseKey(base)
+    return total
 
-    # "Vazio junto" — limites baixos (PC real normalmente tem dezenas/centenas)
+
+def scan_anti_forensics() -> dict:
+    """
+    Sinais de anti-forense, calibrados pra baixo falso positivo:
+      - Prefetch + Recent + UserAssist TODOS vazios ao mesmo tempo (medium).
+      - Log de Security limpo, evento 1102 (medium).
+    """
+    items = []
+
+    # --- (a) Fontes históricas vazias simultaneamente ---
+    pf_count = _count_dir(r"C:\Windows\Prefetch", ext=".pf")
+    rec_count = _count_dir(os.path.expandvars(r"%APPDATA%\Microsoft\Windows\Recent"))
+    ua_count = _count_userassist()
+
     empties = []
-    if pf_count is not None and pf_count < 30:
-        empties.append(f"Prefetch={pf_count}")
-    if rec_count is not None and rec_count < 10:
-        empties.append(f"Recent={rec_count}")
-    if ua_count is not None and ua_count < 20:
-        empties.append(f"UserAssist={ua_count}")
+    available = 0
+    for nome, valor, limite in (("Prefetch", pf_count, 30),
+                                ("Recent", rec_count, 10),
+                                ("UserAssist", ua_count, 20)):
+        if valor is None:
+            continue
+        available += 1
+        if valor < limite:
+            empties.append(f"{nome}={valor}")
 
-    if len(empties) >= 2:
+    # Só dispara se as 3 fontes foram lidas E as 3 estão vazias. Exigir as 3
+    # juntas evita o FP de SSD com SysMain off (só Prefetch vazia) ou perfil
+    # recém-criado (só 1-2 baixos). Severidade MEDIUM, não HIGH: PC novo ou
+    # formatação legítima também zeram tudo — quem confirma é o conjunto.
+    if available == 3 and len(empties) == 3:
         items.append(_item(
-            label=f"{len(empties)} fontes históricas suspeitamente vazias ao mesmo tempo",
+            label="Prefetch, Recent e UserAssist vazios ao mesmo tempo",
             detail="; ".join(empties) +
-                   "  ·  combinação típica de cleaner executado pré-SS",
-            severity="high", matched="anti-forense:multi-empty",
+                   "  ·  pode ser cleaner pré-SS, mas também PC novo / "
+                   "recém-formatado / SysMain desativado — verifique contexto",
+            severity="medium", matched="anti-forense:multi-empty",
         ))
 
-    # --- Event log limpo (event ID 1102 em Security) ---
-    # wevtutil é nativo do Windows. Pegamos os últimos eventos 1102 do Security.
+    # --- (b) Log de Security limpo (evento 1102) ---
+    # Limpar o log de Security é incomum em uso normal, mas acontece em
+    # manutenção/reinstalação — por isso MEDIUM, não HIGH.
     try:
         r = subprocess.run(
             ["wevtutil", "qe", "Security",
              "/q:*[System[(EventID=1102)]]", "/c:3", "/rd:true", "/f:text"],
             capture_output=True, timeout=10,
         )
+        out = ""
         for enc in ("cp850", "cp1252", "utf-8"):
             try:
                 out = (r.stdout or b"").decode(enc)
                 break
             except UnicodeDecodeError:
                 continue
-        else:
-            out = ""
-        # Procura por timestamps de "TimeCreated" (formato ISO ou local)
         if "1102" in out and r.returncode == 0:
-            # Tenta extrair um TimeCreated
             m = re.search(r"(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2})", out)
-            when = m.group(1) if m else "data não detectada"
+            when = m.group(1) if m else ""
             items.append(_item(
-                label="Log de Security foi LIMPO",
-                detail=f"Evento 1102 detectado em wevtutil  ·  {when}",
-                severity="high", matched="security-log-cleared",
-                timestamp=when if m else "",
+                label="Log de Security foi limpo",
+                detail="Evento 1102 detectado"
+                       + (f" · {when}" if when else "")
+                       + "  ·  incomum em uso normal; também ocorre em reinstalação",
+                severity="medium", matched="security-log-cleared",
+                timestamp=when,
             ))
     except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
         pass
 
-    return _result("Anti-forense (uso recente de cleaner)",
-                   "Cleaner usado nas últimas horas + limpa simultânea de fontes históricas",
+    return _result("Anti-forense",
+                   "Fontes históricas zeradas em conjunto + limpeza do log de Security",
                    items)
 
 

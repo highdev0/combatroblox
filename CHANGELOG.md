@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.11.1] - 2026-06-01
+
+Correção de falsos positivos introduzidos no scan_anti_forensics (v3.11.0).
+
+### Fixed
+
+- **Detecção de Bleachbit/CCleaner por mtime de pasta removida.** O mtime
+  da pasta de instalação muda por atualização automática, não só por uso;
+  CCleaner é comum demais para ser sinal forte; e o `scan_cleaners` já
+  cobre cleaner instalado. Era falso positivo em quem só faz manutenção.
+- **"Fontes históricas vazias" agora exige as três juntas** (Prefetch +
+  Recent + UserAssist) e severidade MEDIUM, não HIGH. Antes, duas bastavam
+  e marcava HIGH — disparava em SSD com SysMain desativado (só Prefetch
+  vazia), perfil recém-criado e PC formatado por motivo legítimo. A nota
+  do item agora aponta essas alternativas.
+- **Log de Security limpo (1102) rebaixado para MEDIUM.** Acontece em
+  reinstalação/manutenção, não é exclusivo de cheat.
+
+Sem mudança de funcionalidade. 20 testes passando.
+
 ## [3.11.0] - 2026-05-30
 
 Quatro fontes forenses adicionais (extra_forensics.py) para pegar quem
