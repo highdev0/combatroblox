@@ -18,7 +18,9 @@ e por isso não limpam. Cada scanner é independente.
 
 import os
 import re
+import time
 import hashlib
+import threading
 import subprocess
 from datetime import datetime
 
@@ -58,6 +60,25 @@ def _match(text):
     """Usa o matching central (word-boundary)."""
     import matching
     return matching.match_keyword(text or "")
+
+
+def _decode(b) -> str:
+    """Decodifica saída de subprocess. Console PT-BR é cp850; cai pra cp1252/utf-8."""
+    if not b:
+        return ""
+    for enc in ("cp850", "cp1252", "utf-8"):
+        try:
+            return b.decode(enc)
+        except UnicodeDecodeError:
+            continue
+    return b.decode("latin-1", errors="replace")
+
+
+def _kill_quiet(p):
+    try:
+        p.kill()
+    except OSError:
+        pass
 
 
 # ============================ 1. ShimCache (AppCompatCache) ============================
@@ -421,9 +442,211 @@ def scan_anti_forensics() -> dict:
                    items)
 
 
+# ============================ 5. USN Journal (execução apagada) ============================
+#
+# O USN Change Journal do NTFS registra TODA criação/exclusão/rename de arquivo
+# no volume, com timestamp, e SOBREVIVE ao arquivo ser apagado. É o que pega o
+# bypass clássico de SS: rodar o executor e apagá-lo antes de telar. Mesmo
+# limpando Prefetch + Amcache + Recent, o registro "krnl.exe foi criado e depois
+# excluído" continua no journal.
+#
+# Dois sinais:
+#   (a) Arquivo com nome de executor que aparece no journal como EXCLUÍDO ou
+#       RENOMEADO (high) ou CRIADO (medium). Pega o exec apagado/escondido.
+#   (b) Journal desativado / recém-recriado: assinatura de `fsutil usn
+#       deletejournal` — alguém apagou o próprio journal pra esconder (a). medium.
+#
+# readjournal precisa de admin (a ferramenta roda elevada na SS); queryjournal
+# não precisa. O parser é por VALOR (extensão do arquivo + bits do código de
+# motivo em hex), não por rótulo — o Windows PT-BR traduz os rótulos do fsutil,
+# então casar por "File name :" quebraria. Os bits de USN_REASON_* não mudam.
+
+USN_VOLUME = os.environ.get("SystemDrive", "C:")
+
+# Bits de USN_REASON_* (winioctl.h) — independem de idioma do Windows.
+_USN_FILE_CREATE = 0x00000100
+_USN_FILE_DELETE = 0x00000200
+_USN_RENAME_OLD = 0x00001000
+_USN_RENAME_NEW = 0x00002000
+_USN_STRUCT_BITS = (_USN_FILE_CREATE | _USN_FILE_DELETE
+                    | _USN_RENAME_OLD | _USN_RENAME_NEW)
+
+_USN_NAME_RE = re.compile(r"[A-Za-z0-9_.\-]+\.(?:exe|dll|luau|lua|sys)", re.IGNORECASE)
+_USN_HEX_RE = re.compile(r"0x([0-9a-fA-F]{1,8})\b")
+_USN_DATE_RE = re.compile(
+    r"\d{1,2}/\d{1,2}/\d{4}[ T]\d{1,2}:\d{2}(?::\d{2})?"
+    r"|\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(?::\d{2})?")
+
+
+def _usn_reason_from_line(line: str) -> int:
+    """
+    Acha, entre os tokens hex da linha CSV, o que é o código de Reason.
+    O Usn é decimal (sem 0x) e os File IDs são >8 hex (não casam {1,8}),
+    então o token com bit estrutural (create/delete/rename) é o Reason.
+    """
+    best = 0
+    for m in _USN_HEX_RE.finditer(line):
+        val = int(m.group(1), 16)
+        if val & _USN_STRUCT_BITS:
+            return val  # create/delete/rename presente: é o Reason, sem ambiguidade
+        if val & 0x80000000:  # bit CLOSE — guarda como fallback
+            best = val
+    return best
+
+
+def _usn_classify(reason: int):
+    if reason & (_USN_RENAME_OLD | _USN_RENAME_NEW):
+        return "renomeado", "high"
+    if reason & _USN_FILE_DELETE:
+        return "excluído", "high"
+    if reason & _USN_FILE_CREATE:
+        return "criado", "medium"
+    if reason == 0:
+        # Não deu pra ler o motivo (formato de CSV diferente do esperado, ou
+        # motivo em texto/decimal). O nome de executor ESTÁ no journal — não
+        # perde o achado: reporta como média, sem afirmar a operação.
+        return "atividade no journal", "medium"
+    return "modificado", "low"
+
+
+def _usn_parse_line(line: str):
+    """
+    Converte uma linha do readjournal em _item, ou None se não interessa.
+    Puro (sem I/O) pra ser testável sem admin.
+    """
+    mname = _USN_NAME_RE.search(line)
+    if not mname:
+        return None
+    fname = mname.group(0)[:80]
+    kw, _sev = _match(fname)
+    if not kw:
+        return None
+    # Lê o motivo SEM o trecho do nome — um exec tipo "0x200loader.exe" não
+    # pode injetar um bit de reason falso (FP de "excluído").
+    reason_src = line[:mname.start()] + " " + line[mname.end():]
+    reason = _usn_reason_from_line(reason_src)
+    verbo, sev = _usn_classify(reason)
+    mdate = _USN_DATE_RE.search(line)
+    return _item(
+        label=f"{fname} — {verbo}",
+        detail=f"Nome de executor {verbo} no volume (motivo=0x{reason:08x}, "
+               f"match={kw}). USN sobrevive ao arquivo ser apagado.",
+        severity=sev, matched=f"usn:{kw}",
+        timestamp=mdate.group(0) if mdate else "",
+    )
+
+
+def scan_usn_journal() -> dict:
+    """
+    Lê o USN Journal do NTFS pra achar arquivos com nome de executor que foram
+    criados/excluídos/renomeados — mesmo que o arquivo já não exista. Pega o
+    bypass de apagar o exec antes da SS. readjournal exige admin.
+    """
+    desc = "USN Journal — exec criado/apagado no disco (sobrevive a apagar o arquivo)"
+
+    # --- (b) queryjournal: confirma journal ativo (não precisa admin) ---
+    try:
+        q = subprocess.run(["fsutil", "usn", "queryjournal", USN_VOLUME],
+                           capture_output=True, timeout=10)
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as e:
+        return _result("USN Journal", desc, [], error=f"fsutil indisponível: {e}")
+
+    if q.returncode != 0:
+        low = (_decode(q.stdout) + _decode(q.stderr)).lower()
+        # Só trata como "desativado" se a msg fala de journal inativo — uma
+        # negação de permissão ("acesso negado") NÃO é sinal de bypass.
+        if ("não está" in low or "not active" in low or "nao esta" in low
+                or "deletejournal" in low):
+            return _result("USN Journal", desc, [_item(
+                label="USN Journal desativado",
+                detail="fsutil usn queryjournal indica journal inativo — pode ter "
+                       "sido apagado (fsutil usn deletejournal). Incomum em uso normal.",
+                severity="medium", matched="usn:journal-off",
+            )])
+        # senão: provavelmente permissão/erro transitório — segue pro readjournal
+
+    # --- (a) readjournal: lê os registros (precisa admin) ---
+    try:
+        proc = subprocess.Popen(
+            ["fsutil", "usn", "readjournal", USN_VOLUME, "csv"],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    except (FileNotFoundError, OSError) as e:
+        return _result("USN Journal", desc, [], error=f"fsutil indisponível: {e}")
+
+    items = []
+    seen = set()
+    scanned = 0
+    head = []  # primeiras linhas, pra diagnosticar "acesso negado" sem admin
+    broke_early = False  # parou por cap/limite (proc ainda vivo) vs. EOF natural
+    # Watchdog: o cap de 30s é por-linha; se o fsutil travar SEM emitir linha, o
+    # for bloqueia em I/O e o cap nunca dispara. Este timer mata o processo de
+    # qualquer jeito (35s), fechando o pipe e desbloqueando o for.
+    watchdog = threading.Timer(35.0, _kill_quiet, args=(proc,))
+    watchdog.daemon = True
+    watchdog.start()
+    start = time.time()
+    try:
+        for raw in proc.stdout:
+            scanned += 1
+            # Caps: 3M linhas OU 30s — journal no máximo (32MB) tem ~550k linhas.
+            if scanned > 3_000_000 or (time.time() - start) > 30:
+                broke_early = True
+                break
+            if len(head) < 5:
+                head.append(_decode(raw))
+            low = raw.lower()
+            if (b".exe" not in low and b".dll" not in low
+                    and b".lua" not in low and b".sys" not in low):
+                continue
+            it = _usn_parse_line(_decode(raw))
+            if not it:
+                continue
+            key_id = it["label"].lower()
+            if key_id in seen:
+                continue
+            seen.add(key_id)
+            items.append(it)
+            if len(items) >= 60:
+                broke_early = True
+                break
+    finally:
+        watchdog.cancel()
+        # rc distingue "saiu sozinho" (EOF natural: clean ou erro) de "paramos
+        # cedo" (proc ainda vivo). Só esperamos o rc quando NÃO paramos cedo —
+        # senão wait() bloquearia. Depois mata e lê o stderr bufferizado.
+        rc = None
+        if not broke_early:
+            try:
+                rc = proc.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                rc = None
+        _kill_quiet(proc)
+
+    try:
+        err = _decode(proc.stderr.read() or b"") if proc.stderr else ""
+    except OSError:
+        err = ""
+
+    # Sem achados: distinguir "journal lido, nada encontrado" (clean) de
+    # "não consegui ler" (sem admin). Sinais de falha: returncode != 0 (saiu
+    # sozinho com erro) OU mensagem de acesso negado (PT/EN) no stdout/stderr.
+    if not items:
+        blob = (" ".join(head) + " " + err).lower()
+        denied = ("negado" in blob or "denied" in blob or "erro 5" in blob
+                  or "error 5" in blob)
+        failed_rc = rc is not None and rc != 0
+        if denied or failed_rc:
+            return _result("USN Journal", desc, [],
+                           error="readjournal não retornou registros - rode a ferramenta "
+                                 "como administrador (acesso ao journal exige elevação)")
+
+    return _result("USN Journal", desc, items)
+
+
 ALL_EXTRA_FORENSIC_SCANNERS = [
     scan_shimcache,
     scan_srum,
     scan_script_hashes,
     scan_anti_forensics,
+    scan_usn_journal,
 ]

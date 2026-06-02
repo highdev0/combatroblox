@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.12.0] - 2026-06-02
+
+Novo scanner anti-bypass: leitura do USN Journal do NTFS.
+
+### Added
+
+- `scan_usn_journal` (extra_forensics): lê o USN Change Journal do NTFS
+  (`fsutil usn readjournal`) e sinaliza arquivos com nome de executor que
+  foram **criados, excluídos ou renomeados** no volume — mesmo que o arquivo
+  já não exista. Pega o bypass clássico de SS: rodar o executor e apagá-lo
+  antes de telar. O journal sobrevive à limpa de Prefetch/Amcache/Recent.
+- Também detecta o journal **desativado/recriado** (assinatura de
+  `fsutil usn deletejournal`), via `queryjournal` (não exige admin).
+- O parser lê o motivo pelos bits do código hex de `USN_REASON_*`, não pelo
+  rótulo de texto — funciona em Windows PT-BR (que traduz os rótulos do
+  fsutil). `readjournal` exige admin; sem admin o scanner retorna um aviso
+  claro em vez de "limpo".
+- Severidade: excluído/renomeado = alta; criado = média.
+- Testes: bits do motivo independem de idioma, linha de exec excluído vira
+  item de alta, e processos legítimos (`chrome.exe`) / extensões fora do
+  alvo (`.txt`) não geram falso positivo.
+
+### Changed
+
+- Contagem de scanners: 44 para 45.
+
 ## [3.11.5] - 2026-06-01
 
 ### Changed

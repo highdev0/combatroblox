@@ -209,10 +209,61 @@ def test_extra_forensic_scanners_run():
 
 
 def test_extra_forensics_registered():
-    """Os 4 scanners do Tier 1 estão na lista."""
+    """Os scanners do Tier 1 estão na lista."""
     import extra_forensics
     names = {fn.__name__ for fn in extra_forensics.ALL_EXTRA_FORENSIC_SCANNERS}
-    assert names == {"scan_shimcache", "scan_srum", "scan_script_hashes", "scan_anti_forensics"}
+    assert names == {"scan_shimcache", "scan_srum", "scan_script_hashes",
+                     "scan_anti_forensics", "scan_usn_journal"}
+
+
+def test_usn_reason_bits_language_independent():
+    """O motivo do USN é lido pelos bits do código hex, não pelo rótulo (PT-BR
+    traduz 'Reason'). Cada bit estrutural mapeia pra severidade certa."""
+    import extra_forensics as ef
+    assert ef._usn_classify(ef._usn_reason_from_line("x 0x80000200: excluir")) == ("excluído", "high")
+    assert ef._usn_classify(ef._usn_reason_from_line("x 0x00000100: criar")) == ("criado", "medium")
+    assert ef._usn_classify(ef._usn_reason_from_line("x 0x00001000: rename")) == ("renomeado", "high")
+    assert ef._usn_classify(ef._usn_reason_from_line("x 0x00002000: rename")) == ("renomeado", "high")
+    # Motivo ilegível (0) não vira "baixa" silenciosa: o nome está no journal,
+    # então é média "atividade" — não perde o achado se o CSV vier diferente.
+    assert ef._usn_classify(0) == ("atividade no journal", "medium")
+
+
+def test_usn_parse_line_flags_deleted_executor():
+    """Linha do readjournal com exec EXCLUÍDO vira item high; arquivo comum é ignorado."""
+    import extra_forensics as ef
+    # nome de executor conhecido + bit de delete -> high
+    it = ef._usn_parse_line("5028431440,krnl.exe,0x80000200,2024-12-02 14:03:11")
+    assert it is not None
+    assert it["severity"] == "high"
+    assert it["matched"].startswith("usn:")
+    assert "excluído" in it["label"]
+    assert it["timestamp"] == "2024-12-02 14:03:11"
+    # processo legítimo do Windows não casa a base -> None (sem falso positivo)
+    assert ef._usn_parse_line("123,chrome.exe,0x00000200,...") is None
+    # extensão fora do alvo (.txt) não vira item
+    assert ef._usn_parse_line("123,notas.txt,0x00000200,...") is None
+
+
+def test_usn_reason_ignores_hex_inside_filename():
+    """FP: um hex dentro do nome (0x200.krnl.exe) não pode injetar o bit de
+    DELETE. O motivo real (0x100 = criado) é lido sem o trecho do nome.
+    (Sem a excisão, o 0x200 do nome seria lido como 'excluído'.)"""
+    import extra_forensics as ef
+    it = ef._usn_parse_line("100,0x200.krnl.exe,0x00000100,...")
+    assert it is not None
+    assert "criado" in it["label"]   # não "excluído"
+    assert it["severity"] == "medium"
+
+
+def test_usn_degraded_format_still_flags():
+    """Se o motivo vier em texto (não 0x hex), o exec ainda é sinalizado como
+    média 'atividade' — robustez contra formato de CSV diferente do esperado."""
+    import extra_forensics as ef
+    it = ef._usn_parse_line("5028431440,krnl.exe,FILE_DELETE|CLOSE")
+    assert it is not None
+    assert it["severity"] == "medium"
+    assert "atividade no journal" in it["label"]
 
 
 def test_script_hash_match_logic(tmp_path, monkeypatch):
