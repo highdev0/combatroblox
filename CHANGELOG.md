@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.12.1] - 2026-06-02
+
+### Changed
+
+- Animação de abertura/fechamento nas seções colapsáveis do relatório HTML
+  (suave, com easing spring; 220ms abrir / 180ms fechar).
+
 ## [3.12.0] - 2026-06-02
 
 Novo scanner anti-bypass: leitura do USN Journal do NTFS.
