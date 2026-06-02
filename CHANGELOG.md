@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.12.2] - 2026-06-02
+
+### Changed
+
+- Otimiza scanning de processos e DLLs no `live_analysis`: reduz overhead na
+  varredura de processos ativos e lista de módulos carregados.
+- README: adiciona seção "Sobre o Autor".
+
 ## [3.12.1] - 2026-06-02
 
 ### Changed

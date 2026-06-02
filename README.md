@@ -169,6 +169,10 @@ pip install -r requirements.txt
 
 Vulnerabilidades: ver `SECURITY.md`.
 
+## Sobre o Autor (About Me)
+
+Desenvolvido por Gabriel ([@highdev0](https://github.com/highdev0)).
+
 ## Licença
 
 MIT. Ver `LICENSE`.
