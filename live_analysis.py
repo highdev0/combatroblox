@@ -13,6 +13,7 @@ import os
 import ctypes
 from ctypes import wintypes
 from datetime import datetime
+import functools
 
 from database import (
     ROBLOX_PROCESS_NAMES,
@@ -78,6 +79,7 @@ WINTRUST_ACTION_GENERIC_VERIFY_V2 = GUID(
 )
 
 
+@functools.lru_cache(maxsize=1024)
 def _is_dll_signed(path: str) -> bool | None:
     """
     Retorna True se DLL é assinada e válida, False se inválida, None se erro.
@@ -198,12 +200,13 @@ def scan_roblox_dll_injection() -> dict:
 
     items = []
     target_pids = []
+    roblox_names_lower = {n.lower() for n in ROBLOX_PROCESS_NAMES}
 
     # Acha processos do Roblox
     for proc in psutil.process_iter(["pid", "name", "exe", "create_time"]):
         try:
             name = (proc.info.get("name") or "")
-            if name in ROBLOX_PROCESS_NAMES or name.lower() in {n.lower() for n in ROBLOX_PROCESS_NAMES}:
+            if name in ROBLOX_PROCESS_NAMES or name.lower() in roblox_names_lower:
                 target_pids.append((proc.info["pid"], name, proc.info.get("exe", ""),
                                     proc.info.get("create_time", 0)))
         except (psutil.NoSuchProcess, psutil.AccessDenied):
@@ -320,11 +323,12 @@ def scan_process_tree() -> dict:
     }
 
     items = []
+    roblox_names_lower = {n.lower() for n in ROBLOX_PROCESS_NAMES}
 
     for proc in psutil.process_iter(["pid", "name", "ppid"]):
         try:
             name = (proc.info.get("name") or "").lower()
-            if name not in {n.lower() for n in ROBLOX_PROCESS_NAMES}:
+            if name not in roblox_names_lower:
                 continue
             ppid = proc.info.get("ppid", 0)
 
@@ -440,6 +444,8 @@ def scan_overlay_windows() -> dict:
             if pid_val in seen_pids:
                 return True
 
+            seen_pids.add(pid_val)
+
             try:
                 pname = psutil.Process(pid_val).name().lower()
             except (psutil.NoSuchProcess, psutil.AccessDenied):
@@ -447,8 +453,6 @@ def scan_overlay_windows() -> dict:
 
             if pname in OVERLAY_WHITELIST:
                 return True
-
-            seen_pids.add(pid_val)
 
             # Título da janela (contexto)
             length = user32.GetWindowTextLengthW(hwnd)
