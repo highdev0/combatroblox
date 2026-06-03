@@ -484,8 +484,139 @@ def scan_overlay_windows() -> dict:
                    items)
 
 
+# ============================ Detecção estrutural (comportamental) ============================
+
+# Locais onde o usuário pode escrever sem admin — onde executores se instalam.
+_EXECUTOR_STRUCT_ROOTS = [
+    r"%LOCALAPPDATA%",
+    r"%APPDATA%",
+    r"%LOCALAPPDATA%\Programs",
+    r"%USERPROFILE%\Downloads",
+]
+
+# Pastas-marcador de runtime embutido que executores modernos (Solara, Wave,
+# Velocity, etc.) carregam junto pra renderizar a UI. Apps legítimos com
+# WebView2 deixam só DADOS no AppData e o .exe ASSINADO em Program Files —
+# executores largam o .exe (não-assinado) NA MESMA pasta do runtime.
+_EMBEDDED_RUNTIME_MARKERS = ("EBWebView", "msedgewebview2.exe", "cef", "libcef.dll")
+
+# Pastas do próprio Windows/Microsoft que nunca devem ser flagadas mesmo se
+# casarem o padrão (defesa extra contra FP).
+_STRUCT_WHITELIST_SUBSTR = (
+    "\\microsoft\\", "\\windows\\", "\\packages\\microsoft",
+    "\\google\\", "\\discord", "\\microsoftedge",
+)
+
+
+def _fmt_ts(ts: float) -> str:
+    """epoch -> 'YYYY-MM-DD HH:MM:SS' (formato que o fp_filter/timeline parseiam)."""
+    try:
+        return datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S")
+    except (ValueError, OSError, OverflowError):
+        return ""
+
+
+def _has_embedded_runtime(folder: str, subdirs: list, files: list) -> bool:
+    """A pasta tem um runtime web embutido (marca de UI de executor)?"""
+    lower_subs = {d.lower() for d in subdirs}
+    lower_files = {f.lower() for f in files}
+    for m in _EMBEDDED_RUNTIME_MARKERS:
+        ml = m.lower()
+        if ml in lower_subs or ml in lower_files:
+            return True
+    # EBWebView um nível abaixo (padrão comum: <exe> + <sub>/EBWebView)
+    for sub in subdirs:
+        try:
+            if os.path.isdir(os.path.join(folder, sub, "EBWebView")):
+                return True
+        except OSError:
+            pass
+    return False
+
+
+def scan_executor_structure() -> dict:
+    """
+    Detecção COMPORTAMENTAL de executor — pega mesmo renomeado.
+
+    Em vez de bater no NOME ('solara.exe'), bate na ESTRUTURA: um .exe
+    NÃO-ASSINADO na mesma pasta de um runtime web embutido (EBWebView/CEF),
+    em local gravável pelo usuário. Esse é o fingerprint de Solara/Wave/
+    Velocity/etc — e sobrevive a renomear o arquivo E a pasta.
+
+    Conservador de propósito (anti-FP):
+      - Exige runtime embutido + exe não-assinado JUNTOS (apps legítimos
+        com WebView2 deixam o exe assinado em Program Files).
+      - Severidade MEDIUM — sozinho vira no máximo SUSPECT no Confidence
+        Engine; só CONFIRMA se corroborado por outra fonte.
+      - Whitelist de pastas Microsoft/Windows/Google/Discord.
+      - Validado: 0 hits em PC limpo com Roblox + dezenas de apps WebView2.
+    """
+    items = []
+    seen = set()
+    checked = 0
+    MAX_CHECK = 400  # teto de exes verificados (perf)
+
+    for raw_root in _EXECUTOR_STRUCT_ROOTS:
+        root = os.path.expandvars(raw_root)
+        if not os.path.isdir(root):
+            continue
+        for dirpath, dirnames, filenames in os.walk(root):
+            depth = dirpath[len(root):].count(os.sep)
+            if depth > 3:
+                dirnames[:] = []
+                continue
+            if dirpath in seen:
+                continue
+            seen.add(dirpath)
+
+            low_dir = dirpath.lower()
+            if any(w in low_dir for w in _STRUCT_WHITELIST_SUBSTR):
+                continue
+
+            exes = [f for f in filenames if f.lower().endswith(".exe")]
+            if not exes:
+                continue
+            if not _has_embedded_runtime(dirpath, dirnames, filenames):
+                continue
+
+            for exe in exes:
+                if checked >= MAX_CHECK:
+                    break
+                exe_path = os.path.join(dirpath, exe)
+                checked += 1
+                signed = _is_dll_signed(exe_path)  # WinVerifyTrust serve p/ exe
+                if signed:
+                    continue  # assinado = app legítimo, ignora
+
+                # não-assinado (ou sem assinatura) + runtime embutido = sinal
+                try:
+                    mtime = _fmt_ts(os.path.getmtime(exe_path))
+                except OSError:
+                    mtime = ""
+                folder_name = os.path.basename(dirpath)
+                items.append(_item(
+                    label=f"Estrutura de executor: {exe}",
+                    detail=f"{exe_path}\nExe NÃO-ASSINADO na mesma pasta de um runtime "
+                           f"web embutido (EBWebView/CEF) — fingerprint de executor "
+                           f"Roblox moderno (Solara/Wave/Velocity/etc). Pega mesmo "
+                           f"se o arquivo foi renomeado.",
+                    severity="medium",
+                    matched=f"executor-struct:{folder_name.lower()}",
+                    timestamp=mtime,
+                ))
+            if checked >= MAX_CHECK:
+                break
+
+    return _result(
+        "Estrutura de executor (comportamental)",
+        "Exe não-assinado + runtime web embutido em pasta de usuário — pega executor renomeado",
+        items,
+    )
+
+
 ALL_LIVE_ANALYSIS_SCANNERS = [
     scan_roblox_dll_injection,
     scan_process_tree,
     scan_overlay_windows,
+    scan_executor_structure,
 ]

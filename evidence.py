@@ -46,6 +46,7 @@ SOURCE_WEIGHTS: dict[str, float] = {
     "kernel_drivers":       0.95,
     "live_processes":       0.95,
     "live_dll_injection":   0.90,
+    "executor_structure":   0.80,   # comportamental — exe não-assinado + runtime web
     "usn_journal":          0.95,
     "bam":                  0.90,
     "prefetch":             0.90,
@@ -461,6 +462,7 @@ def _source_slug_from_name(scanner_name: str) -> str:
     rules = [
         ("kernel driver",         "kernel_drivers"),
         ("driver",                "kernel_drivers"),
+        ("estrutura de executor",  "executor_structure"),
         ("dll injection",         "live_dll_injection"),
         ("process tree",          "live_processes"),
         ("process",               "live_processes"),

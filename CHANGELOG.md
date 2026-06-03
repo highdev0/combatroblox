@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.18.0] - 2026-06-03
+
+**Detecção comportamental — pega executor mesmo renomeado.**
+
+### Added
+
+- **`scan_executor_structure`**: novo scanner que detecta executor pela
+  ESTRUTURA, não pelo nome. Bate no fingerprint dos executores modernos
+  (Solara/Wave/Velocity/etc): um `.exe` **não-assinado** na mesma pasta
+  de um **runtime web embutido** (EBWebView/CEF), em local gravável pelo
+  usuário. Sobrevive a renomear o arquivo E a pasta — onde a detecção
+  por nome cega, essa pega.
+
+### Por que não dá falso positivo
+
+- Apps legítimos com WebView2 (Discord, Outlook, WhatsApp, Roblox Studio...)
+  deixam só DADOS no AppData e o `.exe` **assinado** em Program Files.
+  Executores largam o `.exe` não-assinado junto do runtime. O scanner
+  exige as duas coisas JUNTAS.
+- Severidade **MEDIUM** — sozinho vira no máximo SUSPECT no Confidence
+  Engine; só CONFIRMA se corroborado por outra fonte. Nunca acusa falso.
+- Whitelist de pastas Microsoft/Windows/Google/Discord.
+- **Validado empiricamente**: 0 hits num PC real com Roblox + Roblox
+  Studio + dezenas de apps WebView2. Tem teste que falha se algum dia
+  passar a dar FP na máquina.
+
+- 6 testes novos (104 no total): pega renomeado, ignora assinado, ignora
+  sem runtime, whitelist, zero-FP na máquina real, e a evidência sozinha
+  nunca vira CONFIRMED.
+
 ## [3.17.0] - 2026-06-03
 
 **Assinaturas atualizáveis sem rebuildar o `.exe`** — fecha o maior ponto
