@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.15.1] - 2026-06-03
+
+Polimento visual do hero verdict no relatório HTML.
+
+### Changed
+
+- Emoji nativo do SO (🔴🟠🟡🟢⚪) renderizado em 56px ficava pixelado/feio.
+  Substituído por **SVGs Lucide-style inline** (shield-check, shield-x,
+  alert-octagon, alert-triangle, circle-dashed) que escalam como vetor.
+- Container circular do ícone com glow ambient da cor do veredito.
+- **Pulse animation** sutil no SVG só quando há urgência
+  (CONFIRMED/DETECTED) — escala 1.06 + opacity 0.92 num ciclo de 2s.
+- **Ring expandindo** ao redor do ícone no estado CONFIRMED — atrai
+  atenção sem ser agressivo.
+- **Fade-in** suave do hero inteiro ao carregar a página.
+- Classes `hv-state-clean/warn/bad` ajustam borda + glow ambient da seção.
+- Tudo inline — relatório continua standalone offline. HTML cresceu ~1KB.
+
 ## [3.15.0] - 2026-06-03
 
 **Confidence Engine** — o salto arquitetural. Em vez de listar 50+ hits
