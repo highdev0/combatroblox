@@ -10,6 +10,15 @@ jobs:
   lint-and-smoke:
     runs-on: windows-latest
 
+    strategy:
+      fail-fast: false
+      matrix:
+        # Cobre a versão de build (3.11) e versões mais novas, pra pegar
+        # cedo problemas de compatibilidade futura (ex: APIs deprecadas).
+        python-version: ["3.11", "3.12", "3.13"]
+
+    name: tests (py${{ matrix.python-version }})
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -17,7 +26,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "${{ matrix.python-version }}"
 
       - name: Install dependencies
         run: |
@@ -31,9 +40,13 @@ jobs:
 
       - name: Import smoke test
         run: |
-          python -c "import antievasion, capture, command_history, database, diff_tool, discord_cache, extra_forensics, forensics, fp_filter, fresh_install, live_analysis, matching, network_scanners, pe_analysis, peripherals, persistence, redaction, report, report_md, report_signing, scanners, telador; print('Smoke imports OK')"
-          python -c "import json; json.load(open('signatures.example.json', encoding='utf-8')); print('signatures.example.json valido')"
+          python -c "import antievasion, capture, command_history, database, diff_tool, discord_cache, evidence, extra_forensics, forensics, fp_filter, fresh_install, live_analysis, matching, network_scanners, pe_analysis, peripherals, persistence, redaction, report, report_md, report_signing, scanners, sigupdate, telador, watch_server; print('Smoke imports OK')"
 
-      - name: Unit tests (detection + anti-false-positive)
+      - name: Validate signature files
+        run: |
+          python -c "import json; json.load(open('signatures.example.json', encoding='utf-8')); print('signatures.example.json valido')"
+          python -c "import json, sigupdate; d = json.load(open('signatures.dist.json', encoding='utf-8')); assert sigupdate._looks_like_valid_signatures(d), 'estrutura invalida'; assert isinstance(d.get('version'), str), 'sem version'; print('signatures.dist.json valido (versao', d['version'], ')')"
+
+      - name: Unit tests (detection + anti-false-positive + engine + watch + sigupdate)
         run: |
           python -m pytest tests/ -q
