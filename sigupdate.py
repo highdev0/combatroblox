@@ -114,4 +114,4 @@ def update_signatures(url: str = None, dest: str = None,
     except Exception as e:
         return False, f"não consegui salvar ({e})"
 
-    return True, f"base atualizada (versão {version}, {total} assinaturas) → {dest}"
+    return True, f"base atualizada (versao {version}, {total} assinaturas) -> {dest}"
