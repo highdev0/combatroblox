@@ -51,6 +51,9 @@ Enumera drivers carregados em `HKLM\SYSTEM\...\Services` e flaga winring0, rwdrv
 **Confidence Engine: evidências do mesmo executor viram 1 veredito.**
 "solara.exe" no Prefetch + "Solara Executor" no Amcache + "solara hub" no histórico do navegador convergem para um único cluster Solara com confidence%. Sem isso, o supervisor vê 6 hits soltos e tem que correlacionar mentalmente.
 
+**Dashboard ao vivo — sem mandar nada pra nuvem (`--watch`).**
+`telador.exe --watch` abre um painel no navegador que mostra os scanners reportando em tempo real e o veredito se formando. A diferença pras ferramentas comerciais: o servidor roda em `127.0.0.1` (loopback), na própria máquina — **nada sai do PC**. Você tem o "ao vivo" sem entregar os dados do suspeito pra um servidor de terceiro.
+
 **Não envia nada pra lugar nenhum.**
 100% local, sem telemetria, sem cloud, sem update phone-home. Você pode rodar offline. Código aberto, dá pra auditar antes de mandar pro PC do suspeito.
 
@@ -103,6 +106,7 @@ Como conferir:
 
 ```bash
 telador.exe                          # default — roda tudo, gera HTML, abre no browser
+telador.exe --watch                  # dashboard local AO VIVO (127.0.0.1) — scanners e veredito em tempo real, nada sai do PC
 telador.exe --quick                  # ~1s, só os 15 scanners base
 telador.exe --no-screenshot          # pula captura de tela
 telador.exe --high-only              # console mostra só severidade alta/crítica

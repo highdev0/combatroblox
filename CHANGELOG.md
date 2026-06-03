@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.16.0] - 2026-06-03
+
+**Dashboard local ao vivo (`--watch`)** — a vantagem que ferramentas
+comerciais tinham, agora 100% local.
+
+### Added
+
+- **`telador.exe --watch`**: sobe um servidor HTTP em `127.0.0.1` (porta
+  livre, só loopback) e abre um dashboard no navegador que mostra os
+  scanners reportando **em tempo real** e o veredito do Confidence Engine
+  **se formando** conforme as evidências chegam.
+
+- **Diferença filosófica vs. concorrentes**: ferramentas como Abyss
+  transmitem os dados do PC do suspeito pra um servidor na nuvem. Aqui o
+  servidor roda na própria máquina e **nada sai do PC** — o supervisor
+  abre no navegador da própria sessão de SS.
+
+- **Zero dependência nova**: usa só `http.server` + `json` da stdlib.
+  Mantém o princípio de "só psutil em runtime".
+
+- O dashboard mostra: barra de progresso, stream de scanners (com badge
+  de hits ao vivo), e cards de cluster que aparecem/atualizam conforme o
+  Confidence Engine recalcula. Marca claramente "prévia ao vivo" enquanto
+  os clusters são pré-FP-filter; ao final, `finalize()` substitui pela
+  versão autoritativa (pós-filtro).
+
+- Novo módulo `watch_server.py` (~230 linhas, dashboard HTML inline).
+- `run_scanners_parallel` ganhou parâmetro opcional `on_result` (callback
+  por scanner concluído) — usado pelo streaming do dashboard.
+
 ## [3.15.1] - 2026-06-03
 
 Polimento visual do hero verdict no relatório HTML.

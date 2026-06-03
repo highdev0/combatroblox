@@ -96,7 +96,7 @@ BANNER = r"""
 def print_banner():
     print(f"{AMBER}{BANNER}{RESET}")
     print(f"{GREEN}  >_ {RESET}{GREY}screenshare forense · veredito por correlação de evidências{RESET}")
-    print(f"{GREY}  v3.15.1  ·  Confidence Engine  ·  100% local{RESET}\n")
+    print(f"{GREY}  v3.16.0  ·  Confidence Engine  ·  100% local{RESET}\n")
     self_hash = report_signing.get_self_hash()
     if self_hash:
         print(f"{GREY}  SHA256 deste exe: {self_hash[:16]}...{self_hash[-16:]}{RESET}")
@@ -172,8 +172,13 @@ def _run_one(fn) -> dict:
         }
 
 
-def run_scanners_parallel(chain: list, only: list = None, max_workers: int = 4, high_only: bool = False) -> list:
-    """Roda scanners em paralelo (até max_workers ao mesmo tempo)."""
+def run_scanners_parallel(chain: list, only: list = None, max_workers: int = 4,
+                          high_only: bool = False, on_result=None) -> list:
+    """Roda scanners em paralelo (até max_workers ao mesmo tempo).
+
+    on_result(result, done, total): callback opcional chamado a cada scanner
+    que termina — usado pelo dashboard --watch pra streamar ao vivo.
+    """
     to_run = []
     for fn in chain:
         label = fn.__name__.replace("scan_", "").replace("_", " ")
@@ -230,6 +235,13 @@ def run_scanners_parallel(chain: list, only: list = None, max_workers: int = 4, 
                 hidden = len(result["items"]) - len(shown)
                 if high_only and hidden > 0 and not shown:
                     print(f"      {GREY}({hidden} item(s) abaixo de high ocultados){RESET}")
+
+            # Streama pro dashboard ao vivo (--watch), se ligado.
+            if on_result is not None:
+                try:
+                    on_result(result, completed, total)
+                except Exception:
+                    pass  # dashboard nunca pode derrubar o scan
 
     elapsed = time.time() - start_total
     print(f"\n{GREY}  Total: {elapsed:.1f}s (paralelo){RESET}")
@@ -397,6 +409,8 @@ def main():
     parser.add_argument("--force-screenshot", action="store_true", help="Captura tela mesmo se gerenciador de senhas estiver aberto")
     parser.add_argument("--md",            action="store_true", help="Também salva relatório em Markdown (colável no Discord)")
     parser.add_argument("--quick",         action="store_true", help="Modo rápido: só scanners base (pula forensics/persistence/live/etc)")
+    parser.add_argument("--watch",         action="store_true",
+                        help="Abre um dashboard LOCAL ao vivo (127.0.0.1) mostrando scanners e veredito em tempo real. Nada sai do PC.")
     parser.add_argument("--no-parallel",   action="store_true", help="Rodar sequencial (debug)")
     parser.add_argument("--threads",       type=int, default=4, help="Threads em paralelo (default 4)")
     parser.add_argument("--json",          action="store_true", help="Também salvar relatório JSON")
@@ -484,11 +498,36 @@ def main():
             skip_peripherals=args.no_peripherals,
         )
 
+    # Dashboard local ao vivo (--watch). Sobe servidor em loopback antes do
+    # scan; cada scanner que termina é streamado. Nada sai do PC.
+    watch_cb = None
+    watch_url = None
+    if args.watch:
+        try:
+            import watch_server
+            total_scanners = len(chain) if not only_list else sum(
+                1 for fn in chain
+                if fn.__name__.replace("scan_", "").replace("_", " ") in only_list
+            )
+            watch_url = watch_server.start(total_scanners, open_browser=not args.no_open)
+            if watch_url:
+                print(f"{CYAN}[WATCH]{RESET} Dashboard ao vivo: {GREEN}{watch_url}{RESET} "
+                      f"{GREY}(local, nada sai do PC){RESET}")
+                watch_cb = watch_server.push_scanner
+            else:
+                print(f"{YELLOW}[WATCH]{RESET} {GREY}Não consegui subir o servidor local — seguindo sem dashboard.{RESET}")
+        except Exception as e:
+            print(f"{YELLOW}[WATCH]{RESET} {GREY}Falhou: {e} — seguindo sem dashboard.{RESET}")
+
     if args.no_parallel:
         findings = run_scanners(chain, only=only_list, high_only=args.high_only)
+        # Modo sequencial não streama incremental; empurra tudo de uma vez.
+        if watch_cb:
+            for i, r in enumerate(findings, 1):
+                watch_cb(r, i, len(findings))
     else:
         findings = run_scanners_parallel(chain, only=only_list, max_workers=args.threads,
-                                         high_only=args.high_only)
+                                         high_only=args.high_only, on_result=watch_cb)
 
     # Filtro de falsos positivos (a menos que --strict)
     fp_stats = None
@@ -555,6 +594,16 @@ def main():
 
     # 3. HTML report
     verdict_obj = fp_filter.compute_verdict(findings)
+
+    # Trava o veredito final no dashboard ao vivo (--watch). Os clusters
+    # aqui já passaram pelo FP-filter, então substituem a prévia ao vivo.
+    if watch_cb:
+        try:
+            import watch_server
+            watch_server.finalize(clusters, verdict_obj)
+        except Exception:
+            pass
+
     html_path = report.generate_html_report(findings, sys_info,
                                              screenshots=screenshots,
                                              high_confidence=high_confidence,
