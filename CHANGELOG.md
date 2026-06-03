@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.18.1] - 2026-06-03
+
+Auditoria de bug + melhoria de interface.
+
+### Fixed
+
+- **Bug de robustez no `scan_executor_structure`**: quando a verificação
+  de assinatura (WinVerifyTrust) retornava `None` (não deu pra determinar —
+  serviço indisponível, arquivo travado, erro), o exe era tratado como
+  não-assinado e **flagado**. Se a checagem falhasse sistemicamente num PC,
+  isso podia gerar **tempestade de falso positivo**. Agora só flaga quando
+  é **comprovadamente** não-assinado (`False`); `None` recebe benefício da
+  dúvida. Não perde detecção real (executor é PE válido não-assinado).
+  Teste de regressão adicionado.
+
+### Added
+
+- **Botão "Copiar resumo" no hero do relatório**: copia um resumo em texto
+  puro (veredito + targets + fontes) pro clipboard, pronto pra colar no
+  Discord da staff. Com fallback pra navegadores sem clipboard API.
+
 ## [3.18.0] - 2026-06-03
 
 **Detecção comportamental — pega executor mesmo renomeado.**

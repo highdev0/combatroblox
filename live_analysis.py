@@ -585,10 +585,16 @@ def scan_executor_structure() -> dict:
                 exe_path = os.path.join(dirpath, exe)
                 checked += 1
                 signed = _is_dll_signed(exe_path)  # WinVerifyTrust serve p/ exe
-                if signed:
-                    continue  # assinado = app legítimo, ignora
+                # Só flaga quando é COMPROVADAMENTE não-assinado (False).
+                # None = não deu pra determinar (WinVerifyTrust indisponível,
+                # erro, arquivo travado) → benefício da dúvida, NÃO flaga.
+                # Isso evita tempestade de FP se a verificação de assinatura
+                # falhar sistemicamente. Não perde detecção real: executor de
+                # verdade é um PE válido não-assinado, que retorna False.
+                if signed is not False:
+                    continue
 
-                # não-assinado (ou sem assinatura) + runtime embutido = sinal
+                # comprovadamente não-assinado + runtime embutido = sinal
                 try:
                     mtime = _fmt_ts(os.path.getmtime(exe_path))
                 except OSError:

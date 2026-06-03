@@ -227,14 +227,57 @@ def _render_hero_verdict(clusters: list, verdict: dict) -> str:
     if cards_html:
         cards_wrapper = f'<div class="hv-cards">{cards_html}</div>'
 
+    # Resumo em texto puro pro botão "Copiar" — supervisor cola no Discord.
+    summary_lines = [f"TELADOR — {headline}"]
+    if global_conf is not None:
+        summary_lines[0] += f" ({global_conf}%)"
+    for c in (confirmed + detected + suspect)[:6]:
+        srcs = ", ".join(_src_label(s) for s in sorted(c.sources))
+        summary_lines.append(
+            f"- {c.label} [{c.verdict} {c.confidence_pct}%] — {c.n_sources} fonte(s): {srcs}"
+        )
+    if not (confirmed or detected or suspect):
+        summary_lines.append("- Nenhum target detectado acima do limite de falso-positivo.")
+    summary_text = "\n".join(summary_lines)
+    # data-summary guarda o texto (escapado pra atributo HTML)
+    summary_attr = html.escape(summary_text, quote=True)
+
+    copy_btn = (
+        f'<button class="hv-copy" type="button" data-summary="{summary_attr}" '
+        f'onclick="teladorCopySummary(this)">📋 Copiar resumo</button>'
+    )
+
     return f"""
     <section class="hero-verdict {state_class}" style="--hv-accent: {color}">
         <div class="hv-icon-wrap">{hero_icon}</div>
         <h1 class="hv-headline" style="color:{color}">{_escape(headline)}</h1>
         <div class="hv-sub">{_escape(sub_msg)}</div>
         {conf_block}
+        <div class="hv-actions">{copy_btn}</div>
         {cards_wrapper}
     </section>
+    <script>
+    function teladorCopySummary(btn) {{
+        var txt = btn.getAttribute('data-summary') || '';
+        var done = function() {{
+            var old = btn.textContent;
+            btn.textContent = '✓ Copiado!';
+            btn.classList.add('copied');
+            setTimeout(function() {{ btn.textContent = old; btn.classList.remove('copied'); }}, 1600);
+        }};
+        if (navigator.clipboard && navigator.clipboard.writeText) {{
+            navigator.clipboard.writeText(txt).then(done, function() {{ teladorFallbackCopy(txt, done); }});
+        }} else {{ teladorFallbackCopy(txt, done); }}
+    }}
+    function teladorFallbackCopy(txt, done) {{
+        try {{
+            var ta = document.createElement('textarea');
+            ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+            document.body.appendChild(ta); ta.select();
+            document.execCommand('copy'); document.body.removeChild(ta); done();
+        }} catch (e) {{}}
+    }}
+    </script>
     """
 
 
@@ -592,6 +635,17 @@ footer code { background: transparent; color: #888; }
     font-family: 'Consolas', 'Courier New', monospace;
 }
 .hv-conf strong { font-size: 24px; font-weight: 800; }
+
+.hv-actions { margin: 4px 0 6px; }
+.hv-copy {
+    background: #1a1a1d; border: 1px solid var(--hv-accent, #2a2a2e);
+    color: #e8e8e8; font-size: 13px; font-weight: 600;
+    padding: 8px 18px; border-radius: 8px; cursor: pointer;
+    font-family: inherit; transition: background 0.15s, transform 0.1s;
+}
+.hv-copy:hover { background: #232327; transform: translateY(-1px); }
+.hv-copy:active { transform: translateY(0); }
+.hv-copy.copied { background: #1f3a26; border-color: #3fbf7f; color: #6fe89f; }
 
 .hv-cards {
     display: grid; gap: 14px; margin-top: 20px; text-align: left;

@@ -59,6 +59,23 @@ def test_ignores_signed_exe(monkeypatch, tmp_path):
     assert len(r["items"]) == 0
 
 
+def test_undetermined_signature_does_not_flag(monkeypatch, tmp_path):
+    """REGRESSÃO: se a verificação de assinatura retorna None (não deu pra
+    determinar — WinVerifyTrust indisponível/erro), NÃO pode flagar.
+    Evita tempestade de FP se a checagem falhar sistemicamente."""
+    fake_local = tmp_path / "Local"
+    folder = fake_local / "MaybeApp"
+    (folder / "EBWebView").mkdir(parents=True)
+    _make_fake_exe(str(folder / "app.exe"))
+
+    monkeypatch.setattr(la, "_EXECUTOR_STRUCT_ROOTS", [str(fake_local)])
+    monkeypatch.setattr(la, "_is_dll_signed", lambda p: None)  # indeterminado
+
+    r = la.scan_executor_structure()
+    assert r["status"] == "clean", "None (indeterminado) não pode virar flag"
+    assert len(r["items"]) == 0
+
+
 def test_ignores_exe_without_embedded_runtime(monkeypatch, tmp_path):
     """Exe não-assinado SEM runtime web embutido não dispara (seria FP)."""
     fake_local = tmp_path / "Local"
