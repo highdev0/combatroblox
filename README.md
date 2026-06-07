@@ -13,9 +13,9 @@
 **Ferramenta forense local para SS (screen-share) em comunidades Roblox.**
 Roda no PC do suspeito, lê artefatos do Windows, e entrega um veredito de cheat — sem nuvem, sem telemetria.
 
-[![Latest Release](https://img.shields.io/github/v/release/highdevian/combatroblox?style=for-the-badge&color=ff4d4f)](https://github.com/highdevian/combatroblox/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/highdevian/combatroblox/total?style=for-the-badge&color=ffb020)](https://github.com/highdevian/combatroblox/releases)
-[![CI](https://img.shields.io/github/actions/workflow/status/highdevian/combatroblox/ci.yml?style=for-the-badge&label=CI)](https://github.com/highdevian/combatroblox/actions)
+[![Release](https://img.shields.io/github/v/tag/highdevian/combatroblox?sort=semver&style=for-the-badge&label=release&color=ff4d4f)](https://github.com/highdevian/combatroblox/releases/latest)
+[![CI](https://img.shields.io/github/actions/workflow/status/highdevian/combatroblox/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/highdevian/combatroblox/actions)
+[![Windows](https://img.shields.io/badge/Windows-10%2F11-0078d6?style=for-the-badge)](https://github.com/highdevian/combatroblox/releases/latest)
 [![License](https://img.shields.io/badge/License-MIT-3fbf7f?style=for-the-badge)](LICENSE)
 
 </div>
