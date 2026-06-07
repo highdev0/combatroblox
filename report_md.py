@@ -84,7 +84,8 @@ def generate_markdown_report(findings, sys_info,
         lines.append("")
 
     lines.append("---")
-    lines.append("*Telador BR · 100% local · zero envio de dados*")
+    lines.append("**Telador** · SS forense pra Roblox · 100% local, open source")
+    lines.append("<https://combatroblox-forensics.vercel.app/> · <https://github.com/highdevian/combatroblox>")
 
     content = "\n".join(lines)
 

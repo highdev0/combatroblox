@@ -1630,6 +1630,16 @@ def generate_html_report(findings: list[dict], sys_info: dict,
         margin-top: 32px; padding: 20px; border-top: 1px solid #1f1f23;
         color: #555; font-size: 12px; text-align: center;
     }
+    .report-attrib {
+        margin-top: 18px; padding-top: 14px; border-top: 1px solid #1f1f23;
+        text-align: center; font-size: 12px; color: #777;
+    }
+    .report-attrib .brand {
+        color: #e8b339; font-weight: 700; letter-spacing: 0.5px;
+        font-family: 'Consolas', monospace;
+    }
+    .report-attrib a { color: #888; text-decoration: none; }
+    .report-attrib a:hover { color: #e8b339; }
 
     /* === Collapsible sections === */
     details > summary {
@@ -2703,6 +2713,13 @@ def generate_html_report(findings: list[dict], sys_info: dict,
         Resultado é heurístico (baseado em nomes/locais conhecidos).
         Pode haver falso positivo (ex.: alguém pesquisou sobre o tema) ou falso negativo (cheat com nome trocado).
         Conduza a tela completa e verifique manualmente os pontos suspeitos.
+        <div class="report-attrib">
+            Relatório gerado pelo <span class="brand">Telador</span> ·
+            ferramenta forense de SS para Roblox · 100% local e open source<br>
+            <a href="https://combatroblox-forensics.vercel.app/" target="_blank" rel="noreferrer">combatroblox-forensics.vercel.app</a>
+            &nbsp;·&nbsp;
+            <a href="https://github.com/highdevian/combatroblox" target="_blank" rel="noreferrer">github.com/highdevian/combatroblox</a>
+        </div>
     </footer>
     </main>
     {CONTROLS_JS}

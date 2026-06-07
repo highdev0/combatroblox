@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.22.0] - 2026-06-07
+
+### Added
+
+- **Atribuição no relatório**: rodapé discreto no HTML e no export Markdown
+  identificando o Telador + link do site/repo. Quando um supervisor
+  compartilha um relatório (o uso natural), quem vê descobre a ferramenta.
+  Distribuição passiva — sem propaganda ativa.
+
 ## [3.21.0] - 2026-06-07
 
 **Evasão de ban e contas alt** — o arsenal de quem leva ban e volta.
