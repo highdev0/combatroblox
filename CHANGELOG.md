@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.22.1] - 2026-06-07
+
+Auditoria de falso positivo — 3 colisões de marca corrigidas.
+
+### Fixed
+
+- **`synapse` (palavra solta) colidia com Razer Synapse** — software de
+  mouse em milhões de PCs gamer era flagado como o executor Synapse X, em
+  HIGH. FP grave. Removida a palavra solta; mantidas variantes específicas
+  (`synapse.exe`, `synapsex`, `synapse x`) que NÃO casam "razersynapse.exe".
+- **`ronix` colidia com Ronix** (marca de wakeboard) e **`valex` com Valex**
+  (marca de cabos). Removidas; cobertas por `.exe` + "x executor" + domínios.
+
+### Garantido por teste
+
+- `tests/test_fp_audit.py`: trava as 3 colisões (não podem casar) E confirma
+  que os executores reais seguem detectados pelas variantes (inclusive em
+  formato Prefetch `SYNAPSE.EXE-XXXX.pf`). 166 testes no total.
+
 ## [3.22.0] - 2026-06-07
 
 ### Added

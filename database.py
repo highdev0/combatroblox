@@ -18,7 +18,12 @@ import json
 
 EXECUTOR_KEYWORDS = {
     # PC Executors
-    "synapse":          "high",
+    # "synapse" (solto) removido — FP grave: colide com Razer Synapse
+    # (software de mouse em milhões de PCs gamer). As variantes abaixo
+    # cobrem o executor Synapse X sem o FP. "synapse.exe" é keyword (não só
+    # process name) pra ser pego no Prefetch/Amcache, e não casa
+    # "razersynapse.exe" (sem fronteira de palavra antes de synapse).
+    "synapse.exe":      "high",
     "synapsex":         "high",
     "synapse x":        "high",
     "krnl":             "high",
@@ -132,7 +137,8 @@ EXECUTOR_KEYWORDS = {
     "getvelocity":      "high",
 
     # Ronix — AUSENTE na base anterior. Adicionado completo.
-    "ronix":            "high",
+    # "ronix" (solto) removido — FP: colide com Ronix (marca de wakeboard).
+    # As variantes abaixo + ronix.exe (processo) cobrem o executor.
     "ronix executor":   "high",
     "ronix exec":       "high",
     "ronix hub":        "high",
@@ -218,7 +224,10 @@ EXECUTOR_KEYWORDS = {
     # Outros menos comuns
     "scriptware":       "high",  # já tinha mas reforça
     "calamari executor":"high",  # já tinha
-    "valex":            "high",
+    # "valex" (solto) removido — FP: colide com Valex (marca de cabos).
+    # "valex.exe" (keyword, pra Prefetch/Amcache) + "valex executor" cobrem.
+    "valex.exe":        "high",
+    "valex executor":   "high",
     "pylon executor":   "high",
     "shellsploit":      "high",
     "fenix exec":       "high",
@@ -702,7 +711,6 @@ SUSPICIOUS_FOLDER_NAMES = {
     "verbose exec":         "high",
     "ninjahub":             "high",
     "ninja hub":            "high",
-    "valex":                "high",
     "pylon exec":           "high",
     "fenix exec":           "high",
     "ronin exec":           "high",
