@@ -2,6 +2,37 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.20.0] - 2026-06-07
+
+**Detecção de autoclickers / macros standalone** — pedido pela comunidade.
+
+### Added
+
+- Base de assinaturas de **ferramentas de autoclique/macro** dedicadas:
+  OP Autoclicker, Speed Autoclicker, GS Auto Clicker, TinyTask, Mouse
+  Recorder, Macro Recorder, Pulover's Macro Creator, MurGee, Mini Mouse
+  Macro, Perfect Automation, e variantes (keywords + nomes de processo).
+- Como entram nas listas que os scanners forenses já varrem, são pegos
+  **automaticamente em todas as fontes** (Prefetch, Amcache, BAM,
+  UserAssist, Downloads, browser, USN, Lixeira, processos ao vivo…) —
+  sem código de scanner novo.
+- Severidade **MEDIUM** (ter um autoclicker não prova cheat — clicker
+  game existe — mas é sinal; o Confidence Engine corrobora com atividade
+  de Roblox). Variantes Roblox-específicas ("roblox auto clicker", "auto
+  farm macro") são **HIGH**.
+
+### Complementa o que já existia
+
+- Software de mouse com motor de macro (G HUB, Razer, Bloody, X-Mouse…)
+  e red flags de conteúdo de macro (no recoil, auto click, rapid fire…)
+  já eram detectados. Agora cobre também as ferramentas standalone.
+
+### Anti-FP
+
+- Word-boundary matching: "autocad", "clicker heroes" (jogo), "macromedia",
+  "macros folder" NÃO disparam. 5 testes novos (159 no total), incl. lista
+  de termos inocentes que não podem casar.
+
 ## [3.19.0] - 2026-06-07
 
 **Detecção de launcher do Roblox modificado** — pedido pela comunidade de SS.

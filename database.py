@@ -275,6 +275,44 @@ EXECUTOR_KEYWORDS = {
     "matrix hub":       "medium",
     "yba hub":          "medium",
     "evade hub":        "medium",
+
+    # ===== Autoclickers / macros standalone =====
+    # Ferramentas dedicadas de autoclique/macro — uso comum em farm de
+    # Roblox (clicar sozinho), combo automático, etc. Severidade MEDIUM:
+    # tê-las não prova cheat (clicker game legítimo existe), mas é sinal —
+    # o Confidence Engine corrobora se houver atividade de Roblox junto.
+    # Nomes específicos o suficiente pra não dar FP (word-boundary).
+    "op autoclicker":     "medium",
+    "opautoclicker":      "medium",
+    "speed autoclicker":  "medium",
+    "speedautoclicker":   "medium",
+    "gs auto clicker":    "medium",
+    "gsautoclicker":      "medium",
+    "free mouse clicker": "medium",
+    "free mouse auto clicker": "medium",
+    "auto mouse clicker": "medium",
+    "tinytask":           "medium",
+    "mouse recorder":     "medium",
+    "mouserecorder":      "medium",
+    "macro recorder":     "medium",
+    "macrorecorder":      "medium",
+    "pulover":            "medium",   # Pulover's Macro Creator
+    "macro creator":      "medium",
+    "mini mouse macro":   "medium",
+    "minimousemacro":     "medium",
+    "perfect automation": "medium",
+    "murgee":             "medium",   # Auto Clicker by MurGee
+    "auto keyboard presser": "medium",
+    "autokeyboard":       "medium",
+    "fast clicker":       "medium",
+    "jitter clicker":     "medium",
+    "jitterclicker":      "medium",
+    # Roblox-específico = mais suspeito
+    "roblox auto clicker":"high",
+    "roblox autoclicker": "high",
+    "roblox macro":       "high",
+    "auto farm macro":    "high",
+    "autofarm macro":     "high",
 }
 
 EXECUTOR_PROCESS_NAMES = {
@@ -390,6 +428,26 @@ EXECUTOR_PROCESS_NAMES = {
     "windbg.exe":             "medium",
     "pe-bear.exe":            "medium",
     "die.exe":                "medium",
+
+    # ===== Autoclickers / macros standalone (processos) =====
+    "opautoclicker.exe":      "medium",
+    "speedautoclicker.exe":   "medium",
+    "gsautoclicker.exe":      "medium",
+    "autoclicker.exe":        "medium",
+    "auto clicker.exe":       "medium",
+    "freemouseclicker.exe":   "medium",
+    "freemouseautoclicker.exe":"medium",
+    "automouseclicker.exe":   "medium",
+    "tinytask.exe":           "medium",
+    "mouserecorder.exe":      "medium",
+    "macrorecorder.exe":      "medium",
+    "mouse recorder pro.exe": "medium",
+    "minimousemacro.exe":     "medium",
+    "perfectautomation.exe":  "medium",
+    "macrocreator.exe":       "medium",   # Pulover's Macro Creator
+    "fastclicker.exe":        "medium",
+    "autokeyboard.exe":       "medium",
+    "auto keyboard presser.exe": "medium",
 }
 
 SUSPICIOUS_DOMAINS = {

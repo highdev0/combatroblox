@@ -49,6 +49,9 @@ A maioria das ferramentas de SS olha só Prefetch. O Telador também detecta:
 - Gap suspeito em log de eventos sem o evento 1102 de limpeza
 - USN Journal: pega arquivo executado **mesmo depois de deletado** (o registro fica)
 
+**Pegar autoclickers e macros.**
+Além do software de mouse com motor de macro (G HUB, Razer) e das red flags de conteúdo (no recoil, auto click, rapid fire), o Telador detecta as ferramentas de autoclique/macro standalone — OP Autoclicker, Speed Autoclicker, TinyTask, Macro Recorder, Pulover, MurGee e dezenas de variantes. Pega o rastro delas em Prefetch/Amcache/BAM/Downloads, mesmo que o cara tenha fechado e apagado.
+
 **Pegar launcher do Roblox modificado.**
 O `RobloxPlayerBeta.exe` oficial é sempre assinado pela Roblox. Se o binário no path de instalação está com a assinatura **quebrada**, foi patcheado (modificado pra injetar na inicialização) — sinal forte. O Telador também pega arquivo com nome de launcher do Roblox largado em Downloads/Desktop não-assinado (dropper disfarçado). Validado com 0 falso positivo num PC com Roblox + Studio legítimos.
 
