@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.23.0] - 2026-06-07
+
+**Lições do primeiro caso real**: o suspeito não rodou como admin e o
+scan ficou cego — e pior, o "nada encontrado" parecia inocência.
+
+### Added
+
+- **Auto-elevação (UAC)**: ao abrir, se não estiver como administrador, o
+  programa PEDE elevação sozinho (UAC). Não depende mais do supervisor
+  saber "botão direito → Executar como administrador". Se o usuário recusar
+  o UAC, segue com cobertura limitada (e aviso forte). Opt-out: `--no-elevate`.
+- **Aviso de scan inconclusivo**: sem admin, as fontes mais fortes
+  (Prefetch/Amcache/BAM/Defender) falham. Um resultado "LIMPO" sem admin
+  agora é marcado como **INCONCLUSIVO** — no console (banner vermelho +
+  aviso pós-veredito) e no relatório HTML (banner âmbar no topo). Evita o
+  erro de ler "nada encontrado" como "inocente" num scan cego.
+
+### Por quê
+
+Sem admin, "nada encontrado" não inocenta — o cheat pode estar lá e o
+scan simplesmente não conseguiu ler. Agora isso fica explícito.
+
 ## [3.22.3] - 2026-06-07
 
 Auditoria de FP — parte 3. Achado o pior: scanners que bypassavam a

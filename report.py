@@ -560,6 +560,12 @@ footer code { background: transparent; color: #888; }
    O bloco que o supervisor lê em <10s. Domina o topo do relatório.
    Tudo o resto fica acessível mas SECUNDÁRIO visualmente.
 ================================================================== */
+.admin-warn {
+    background: #2a1a0a; border: 1px solid #e8b33966; border-left: 4px solid #e8b339;
+    border-radius: 8px; padding: 14px 18px; margin: 0 0 16px;
+    color: #f0d9a8; font-size: 13.5px; line-height: 1.6;
+}
+.admin-warn strong { color: #ffcf6b; }
 .hero-verdict {
     background: radial-gradient(ellipse at top, #1a1a1d 0%, #0e0e10 60%);
     border: 1px solid #2a2a2e;
@@ -1451,6 +1457,19 @@ def generate_html_report(findings: list[dict], sys_info: dict,
         self_hash = report_signing.get_self_hash() or ""
 
     hero_html = _render_hero_verdict(clusters or [], verdict or {})
+
+    # Aviso de scan limitado (sem admin) — banner no topo do relatório.
+    admin_warn_html = ""
+    if sys_info.get("admin") is False:
+        admin_warn_html = (
+            '<div class="admin-warn">'
+            '<strong>⚠ SCAN LIMITADO — não rodou como administrador.</strong> '
+            'As fontes forenses mais fortes (Prefetch, Amcache, BAM, Defender) '
+            'não puderam ser lidas. Um resultado sem detecções aqui é '
+            '<strong>inconclusivo</strong>, não inocenta — rode de novo como '
+            'administrador pra ter um veredito confiável.'
+            '</div>'
+        )
     summary_html = _render_summary(findings, verdict)
     session_html = _render_session(sys_info, self_hash)
     fp_html = _render_fp_stats(fp_stats or {})
@@ -2695,6 +2714,7 @@ def generate_html_report(findings: list[dict], sys_info: dict,
             <div class="sub" style="margin-top:6px; font-size:12px; color:#777">{_escape(sys_info.get('host', '?'))} · {_escape(sys_info.get('user', '?'))} · {_escape(sys_info.get('scan_time', ''))}</div>
         </div>
     </header>
+    {admin_warn_html}
     <span id="verdict"></span>{hero_html}
     <span id="summary"></span>{summary_html}
     {session_html}

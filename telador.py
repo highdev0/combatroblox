@@ -96,7 +96,7 @@ BANNER = r"""
 def print_banner():
     print(f"{AMBER}{BANNER}{RESET}")
     print(f"{GREEN}  >_ {RESET}{GREY}screenshare forense · veredito por correlação de evidências{RESET}")
-    print(f"{GREY}  v3.22.3  ·  Confidence Engine  ·  100% local{RESET}\n")
+    print(f"{GREY}  v3.23.0  ·  Confidence Engine  ·  100% local{RESET}\n")
     self_hash = report_signing.get_self_hash()
     if self_hash:
         print(f"{GREY}  SHA256 deste exe: {self_hash[:16]}...{self_hash[-16:]}{RESET}")
@@ -108,6 +108,45 @@ def is_admin() -> bool:
         return bool(ctypes.windll.shell32.IsUserAnAdmin())
     except Exception:
         return False
+
+
+def maybe_elevate() -> None:
+    """Se não estiver como admin, tenta RELANÇAR elevado via UAC.
+
+    Motivo: sem admin, as fontes forenses mais fortes (Prefetch, Amcache,
+    BAM, Defender) falham e o scan fica cego. Em vez de depender do
+    supervisor saber 'botão direito → Executar como administrador', o
+    programa pede a elevação sozinho ao abrir.
+
+    Comportamento:
+      - Já é admin → não faz nada.
+      - `--no-elevate` ou já relançado → não faz nada (evita loop).
+      - Usuário aceita o UAC → relança elevado e ESTA instância encerra.
+      - Usuário recusa o UAC (ou falha) → segue sem admin (com aviso forte).
+    """
+    if os.name != "nt" or is_admin():
+        return
+    argv = sys.argv[1:]
+    if "--no-elevate" in argv or "--_relaunched" in argv:
+        return
+    try:
+        import subprocess
+        if getattr(sys, "frozen", False):
+            exe = sys.executable
+            params = subprocess.list2cmdline(argv + ["--_relaunched"])
+        else:
+            exe = sys.executable  # python.exe
+            script = os.path.abspath(sys.argv[0])
+            params = subprocess.list2cmdline([script] + argv + ["--_relaunched"])
+        print(f"{CYAN}[ADMIN]{RESET} Pedindo permissão de administrador "
+              f"{GREY}(necessário pra cobertura completa)...{RESET}")
+        rc = ctypes.windll.shell32.ShellExecuteW(None, "runas", exe, params, None, 1)
+        if int(rc) > 32:
+            # Relançou elevado com sucesso — encerra a instância não-admin.
+            sys.exit(0)
+        # rc <= 32: usuário clicou "Não" no UAC ou houve erro → segue sem admin.
+    except Exception:
+        pass
 
 
 def confirm_consent() -> bool:
@@ -413,6 +452,9 @@ def main():
                         help="Abre um dashboard LOCAL ao vivo (127.0.0.1) mostrando scanners e veredito em tempo real. Nada sai do PC.")
     parser.add_argument("--update-sigs",   action="store_true",
                         help="Baixa a base de assinaturas mais recente do GitHub e sai. Comando de manutenção — o scan normal nunca toca a rede.")
+    parser.add_argument("--no-elevate",    action="store_true",
+                        help="Não pedir permissão de administrador (UAC). Roda com cobertura limitada.")
+    parser.add_argument("--_relaunched",   action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--no-parallel",   action="store_true", help="Rodar sequencial (debug)")
     parser.add_argument("--threads",       type=int, default=4, help="Threads em paralelo (default 4)")
     parser.add_argument("--json",          action="store_true", help="Também salvar relatório JSON")
@@ -424,6 +466,12 @@ def main():
                         help="Código de verificação ditado pelo supervisor no início da SS "
                              "(prova que o relatório é desta sessão ao vivo)")
     args = parser.parse_args()
+
+    # Auto-elevação: tenta virar admin via UAC ANTES de tudo (a não ser que
+    # seja --update-sigs, que não precisa, ou o usuário tenha pedido
+    # --no-elevate). Se relançar elevado, esta instância encerra aqui.
+    if not args.update_sigs:
+        maybe_elevate()
 
     print_banner()
 
@@ -455,10 +503,15 @@ def main():
     elif sig_err:
         print(f"{YELLOW}[SIG]{RESET} {GREY}{sig_err}{RESET}")
 
-    if not is_admin():
-        print(f"{YELLOW}⚠  AVISO: Não está rodando como administrador.{RESET}")
-        print(f"{GREY}   Cobertura limitada — Prefetch, Lixeira, Amcache, BAM, Defender vão falhar.{RESET}")
-        print(f"{GREY}   Recomendado: botão direito → 'Executar como administrador'.{RESET}\n")
+    running_as_admin = is_admin()
+    if not running_as_admin:
+        print(f"{RED}{BOLD}╔══════════════════════════════════════════════════════════════╗{RESET}")
+        print(f"{RED}{BOLD}║  ⚠  SCAN LIMITADO — NÃO ESTÁ COMO ADMINISTRADOR              ║{RESET}")
+        print(f"{RED}{BOLD}╚══════════════════════════════════════════════════════════════╝{RESET}")
+        print(f"{YELLOW}   Sem admin, as fontes MAIS IMPORTANTES falham: Prefetch, Amcache,{RESET}")
+        print(f"{YELLOW}   BAM, Defender, Lixeira. Um resultado 'LIMPO' aqui NÃO é confiável —{RESET}")
+        print(f"{YELLOW}   o cheat pode estar lá e o scan simplesmente não conseguiu ler.{RESET}")
+        print(f"{GREY}   Feche e rode de novo como administrador (o programa pede sozinho){RESET}\n")
 
     if not args.no_confirm:
         if not confirm_consent():
@@ -504,6 +557,7 @@ def main():
     # no relatório. Garante que o relatório é DESTA sessão, não reaproveitado.
     sys_info["session_id"] = secrets.token_hex(4).upper()
     sys_info["session_code"] = (args.codigo or "").strip()
+    sys_info["admin"] = running_as_admin  # relatório avisa se foi scan limitado
 
     # --quick: só scanners base, skip todos os extras
     if args.quick:
@@ -613,8 +667,16 @@ def main():
 
     print_overview(findings)
 
-    # 3. HTML report
+    # Aviso CRÍTICO: scan sem admin que não achou nada é INCONCLUSIVO, não
+    # "limpo". É o erro que mais confunde supervisor (cara parece inocente
+    # mas o scan só não conseguiu ler as fontes boas).
     verdict_obj = fp_filter.compute_verdict(findings)
+    if not running_as_admin and verdict_obj["verdict"] == "LIMPO":
+        print(f"{RED}{BOLD}>>> ATENÇÃO: resultado INCONCLUSIVO, não 'limpo'.{RESET}")
+        print(f"{YELLOW}    O scan rodou SEM admin — Prefetch/Amcache/BAM não foram lidos.{RESET}")
+        print(f"{YELLOW}    'Nada encontrado' aqui NÃO inocenta. Rode de novo como admin.{RESET}\n")
+
+    # 3. HTML report
 
     # Trava o veredito final no dashboard ao vivo (--watch). Os clusters
     # aqui já passaram pelo FP-filter, então substituem a prévia ao vivo.
