@@ -47,6 +47,7 @@ import removable_media
 import user_accounts
 import defender_tampering
 import clock_tampering
+import cleaner_tools
 import capture
 import fp_filter
 import pe_analysis
@@ -200,6 +201,7 @@ def assemble_scanners(skip_forensics: bool, skip_antievasion: bool,
     chain.extend(user_accounts.ALL_USER_ACCOUNT_SCANNERS)
     chain.extend(defender_tampering.ALL_DEFENDER_SCANNERS)
     chain.extend(clock_tampering.ALL_CLOCK_SCANNERS)
+    chain.extend(cleaner_tools.ALL_CLEANER_SCANNERS)
     return chain
 
 
