@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.29.0] - 2026-06-08
+
+**Anti-bypass**: detecção de ferramentas de limpeza / secure-delete.
+
+### Added
+
+- **Ferramentas de limpeza** (`cleaner_tools.py`): `scan_cleaner_tools` lê o
+  Prefetch e flagga limpadores/secure-delete que rodaram — pré-limpeza de
+  rastro antes da SS. Secure-delete puro (SDelete, Eraser, BCWipe, shredders) =
+  HIGH (sem uso legítimo num PC de jogo); BleachBit/PrivaZer = MEDIUM;
+  CCleaner/Wise = LOW (rotineiro, contexto). Mapeia pro source `anti_forense`.
+
+### Por quê
+
+Rodar um apagador seguro pouco antes da SS é destruição de evidência. O .pf
+prova que a ferramenta rodou e quando. Validado em dados reais (525 .pf, 0 FP).
+
 ## [3.28.0] - 2026-06-08
 
 **Anti-bypass de timeline**: detecção de relógio do sistema voltado pra trás.
