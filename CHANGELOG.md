@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.27.0] - 2026-06-08
+
+**Anti-bypass do Defender**: detecção de exclusões e proteção desligada — o
+cheater mandando o próprio Windows ignorar a pasta do executor.
+
+### Added
+
+- **Adulteração do Windows Defender** (`defender_tampering.py`):
+  `scan_defender_tampering` lê as exclusões do Defender (via Get-MpPreference,
+  a API oficial — o registro é bloqueado pelo Tamper Protection mesmo com
+  admin) e a proteção em tempo real. Excluir pasta de usuário, executor ou
+  extensão de .exe é o jeito clássico de rodar cheat sem o Defender pegar.
+  Exclusão de pasta de usuário/executor/extensão de exe = HIGH; proteção
+  desligada = contexto (pode ser AV de terceiro). Sem admin = inconclusivo
+  (não vira falso positivo). Source próprio (`defender_tampering`).
+
+### Por quê
+
+Usuário comum nunca mexe em exclusão do antivírus. Uma exclusão apontando pra
+Downloads/AppData ou pro nome de um executor é "esconde meu cheat" na cara.
+Validado em dados reais, incluindo o placeholder de não-admin do Get-MpPreference.
+
 ## [3.26.0] - 2026-06-08
 
 **Multi-conta**: detecção de outras contas de Windows no PC — "cheata na
