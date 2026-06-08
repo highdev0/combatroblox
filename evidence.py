@@ -245,10 +245,15 @@ _MATCHED_PREFIXES_ANTI  = ("anti-forense:", "vss:", "event-log-gap:", "ps-histor
 
 def _infer_kind(label: str, matched: str) -> str:
     """Categoriza o target: executor / byovd / anti_forense / tool."""
+    lbl = (label or "").lower()
     m = (matched or "").lower()
     if m.startswith(_MATCHED_PREFIXES_BYOVD):
         return "byovd"
     if m.startswith(_MATCHED_PREFIXES_ANTI):
+        return "anti_forense"
+    if m.startswith("exclusao-executor:"):
+        return "executor"
+    if m.startswith("exclusao-") or m.startswith("defender-") or "exclusão do defender" in lbl:
         return "anti_forense"
     if "cheat engine" in m or "process hacker" in m or "injector" in m:
         return "tool"

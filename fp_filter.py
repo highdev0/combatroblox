@@ -122,11 +122,44 @@ def is_whitelisted_path(path: str) -> tuple[bool, str | None]:
     if not path:
         return False, None
     lower = path.lower().replace("/", "\\")
+    while "\\\\" in lower:
+        lower = lower.replace("\\\\", "\\")
     for sub in WHITELIST_PATH_SUBSTRINGS:
         sub_normalized = sub.replace("/", "\\").lower()
+        while "\\\\" in sub_normalized:
+            sub_normalized = sub_normalized.replace("\\\\", "\\")
         if sub_normalized in lower:
             return True, f"path-whitelisted ({sub_normalized.strip(chr(92))})"
     return False, None
+
+
+def _path_candidates_for_item(item: dict) -> list[str]:
+    """Extrai textos com chance real de conter o path do artefato."""
+    candidates = []
+    label = (item.get("label") or "").strip()
+    detail = (item.get("detail") or "").strip()
+
+    if detail:
+        first_line = detail.splitlines()[0].strip()
+        if first_line:
+            candidates.append(first_line)
+
+    if ": " in label:
+        suffix = label.split(": ", 1)[1].strip()
+        if suffix:
+            candidates.append(suffix)
+
+    blob = f"{label} {detail}".strip()
+    if blob:
+        candidates.append(blob)
+
+    seen = set()
+    ordered = []
+    for candidate in candidates:
+        if candidate not in seen:
+            seen.add(candidate)
+            ordered.append(candidate)
+    return ordered
 
 
 # ============================ Time decay ============================
@@ -231,6 +264,10 @@ def adjust_browser_finding(item: dict) -> tuple[dict, str | None]:
 
 # ============================ Dev environment downgrade ============================
 
+# matched values que indicam pasta de usuário genérica excluída do Defender
+_DEFENDER_USER_FOLDER_MATCHED = {"exclusao-pasta-usuario", "exclusao-processo"}
+
+
 # Keywords que são suspeitas em geral, mas comum em PC de dev
 DEV_AMBIGUOUS_KEYWORDS = {
     "cheat engine", "cheatengine", "cheatengine-x86_64.exe", "cheatengine-i386.exe",
@@ -248,7 +285,14 @@ def adjust_for_dev_env(item: dict, is_dev: bool) -> tuple[dict, str | None]:
         return item, None
 
     matched = (item.get("matched") or "").lower()
+
     if matched not in DEV_AMBIGUOUS_KEYWORDS:
+        # Exclusão genérica de pasta de usuário: dev costuma excluir projeto do Desktop
+        # por performance → rebaixa HIGH → MEDIUM (ainda vale revisar, mas não é prova)
+        if matched in _DEFENDER_USER_FOLDER_MATCHED:
+            new_sev = _downgrade(item.get("severity", "low"), 1)
+            if new_sev != item.get("severity"):
+                return item, "PC de dev — pasta de usuário excluída do Defender pode ser otimização de performance"
         return item, None
 
     new_sev = _downgrade(item.get("severity", "low"), 2)
@@ -322,12 +366,15 @@ def post_process_findings(findings: list) -> tuple[list, dict]:
             reasons = []
 
             # 1. Whitelist por path — checa label (o caminho real) e detail
-            wl, wl_reason = is_whitelisted_path(
-                item.get("label", "") + " " + item.get("detail", "")
-            )
+            for candidate in _path_candidates_for_item(item):
+                wl, wl_reason = is_whitelisted_path(candidate)
+                if wl:
+                    stats["items_whitelisted"] += 1
+                    # Skip totalmente — não adiciona ao output
+                    break
+            else:
+                wl = False
             if wl:
-                stats["items_whitelisted"] += 1
-                # Skip totalmente — não adiciona ao output
                 continue
 
             # 2. Browser smart context

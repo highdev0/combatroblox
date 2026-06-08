@@ -14,6 +14,19 @@ admin (só SYSTEM lê), então a API é o caminho que de fato funciona em produ�
 import subprocess
 
 import matching
+from database import DEFENDER_EXCLUSION_DEV_PATHS
+
+
+# Normalizado pra comparação case-insensitive com forward/back-slash uniforme
+_DEV_PATH_SUBS = [
+    s.lower().replace("/", "\\").rstrip("\\") for s in DEFENDER_EXCLUSION_DEV_PATHS
+]
+
+
+def _is_dev_exclusion_path(value: str) -> bool:
+    """Retorna True se o path é uma pasta conhecida de IDE / runtime."""
+    low = value.lower().replace("/", "\\")
+    return any(sub in low for sub in _DEV_PATH_SUBS)
 
 
 def _result(name, description, items, error=None):
@@ -56,6 +69,9 @@ def _classify_exclusion(value: str, kind: str):
 
     # Exclusão de pasta gravável pelo usuário (e não Program Files) = suspeito
     if kind == "path":
+        # IDE/runtime conhecida → baixo risco (documentado pelo próprio JetBrains etc)
+        if _is_dev_exclusion_path(v):
+            return "low", "exclusao-dev"
         if any(s in low for s in _USER_WRITABLE) and not low.startswith(
                 ("c:\\program files", "c:\\programdata")):
             return "high", "exclusao-pasta-usuario"

@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.29.1] - 2026-06-08
+
+**Bugfix**: falso positivo em exclusões do Defender para IDEs e pastas de projeto em ambiente de dev.
+
+### Fixed
+
+- **`defender_tampering.py`**: `_classify_exclusion` agora reconhece pastas de IDEs
+  conhecidas (JetBrains, VS Code, `.vscode`, `.cursor`, Unity, etc.) via
+  `DEFENDER_EXCLUSION_DEV_PATHS` e retorna `low` diretamente, sem precisar do
+  FP filter downstream.
+- **`database.py`**: adicionado `microsoft vs code`, `\.vscode`, `\.cursor` e
+  `\.idea` na lista `DEFENDER_EXCLUSION_DEV_PATHS` (entradas faltando).
+- **`fp_filter.py`**: `is_whitelisted_path` normalizava barras duplas incorretamente,
+  fazendo JetBrains e outros paths escaparem da whitelist quando o valor vinha
+  embutido no texto completo do item. `_path_candidates_for_item` extrai o path
+  real antes de comparar. `adjust_for_dev_env` passa a rebaixar
+  `exclusao-pasta-usuario` de HIGH → MEDIUM em ambiente de dev.
+- **`evidence.py`**: exclusões genéricas do Defender (`exclusao-pasta-usuario`,
+  `exclusao-processo`) agora viram evidência do tipo `anti_forense` em vez de
+  `executor`, eliminando clusters errados como "pycharm2025.3 executor".
+
+### Impacto
+
+PC de dev com pasta da JetBrains/VS Code excluída do Defender não gera mais hit
+HIGH nem cluster de executor. Pasta genérica de projeto no Desktop continua
+aparecer como MEDIUM (vale revisão), mas não acusa executor.
+
 ## [3.29.0] - 2026-06-08
 
 **Anti-bypass**: detecção de ferramentas de limpeza / secure-delete.

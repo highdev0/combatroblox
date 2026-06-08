@@ -11,6 +11,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import defender_tampering as dt  # noqa: E402
+import fp_filter as fp  # noqa: E402
 
 
 def test_classify_executor_name_high():
@@ -23,6 +24,20 @@ def test_classify_user_folder_high():
     sev, m = dt._classify_exclusion(r"C:\Users\x\AppData\Local\Temp", "path")
     assert sev == "high"
     assert m == "exclusao-pasta-usuario"
+
+
+def test_classify_dev_tool_path_low():
+    """Pasta de IDE conhecida deve sair LOW do scanner, nunca HIGH."""
+    for path in (
+        r"C:\Users\x\AppData\Local\JetBrains\PyCharm2025.3",
+        r"C:\Users\x\AppData\Local\Programs\Microsoft VS Code",
+        r"C:\Program Files\JetBrains\IntelliJ IDEA",
+        r"C:\Users\x\.vscode",
+        r"C:\Users\x\.cursor",
+    ):
+        sev, m = dt._classify_exclusion(path, "path")
+        assert sev == "low", f"esperado low para {path!r}, obtido {sev!r}"
+        assert m == "exclusao-dev", f"esperado exclusao-dev para {path!r}, obtido {m!r}"
 
 
 def test_classify_exe_extension_high():
@@ -132,3 +147,33 @@ def test_feeds_cluster_engine():
     cl = ev.build_clusters(ev.findings_to_evidences(findings))
     assert len(cl) == 1
     assert cl[0].verdict != "CONFIRMED"
+
+
+def test_fp_filter_whitelists_dev_defender_path_inside_full_item_text():
+    fp._dev_cache = {"is_dev": True, "evidence": ["x", "y"]}
+    findings = [{
+        "name": "Adulteração do Windows Defender",
+        "status": "suspicious",
+        "items": [
+            {
+                "label": "Exclusão do Defender (pasta): C:\\Users\\gabri\\AppData\\Local\\JetBrains\\PyCharm2025.3",
+                "detail": "C:\\Users\\gabri\\AppData\\Local\\JetBrains\\PyCharm2025.3\nO Windows Defender foi mandado IGNORAR esta pasta.",
+                "severity": "high",
+                "matched": "exclusao-pasta-usuario",
+                "timestamp": "",
+            },
+            {
+                "label": "Exclusão do Defender (pasta): C:\\Users\\gabri\\Desktop\\portfolio",
+                "detail": "C:\\Users\\gabri\\Desktop\\portfolio\nO Windows Defender foi mandado IGNORAR esta pasta.",
+                "severity": "high",
+                "matched": "exclusao-pasta-usuario",
+                "timestamp": "",
+            },
+        ],
+    }]
+
+    processed, stats = fp.post_process_findings(findings)
+
+    assert stats["items_whitelisted"] == 1
+    assert len(processed[0]["items"]) == 1
+    assert "portfolio" in processed[0]["items"][0]["label"].lower()

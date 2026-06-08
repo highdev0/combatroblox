@@ -121,6 +121,18 @@ def test_target_id_byovd_classified_correctly():
     assert kind == "byovd"
 
 
+def test_target_id_defender_exclusion_is_anti_forense_unless_known_executor():
+    it = _item(
+        label=r"Exclusão do Defender (pasta): C:\Users\bob\Desktop\portfolio",
+        matched="exclusao-pasta-usuario",
+    )
+    it["detail"] = r"C:\Users\bob\Desktop\portfolio"
+    tid, label, kind = ev.compute_target_id(it)
+    assert tid.scheme == "path"
+    assert label == "portfolio"
+    assert kind == "anti_forense"
+
+
 def test_target_id_normalizes_nt_paths():
     it = _item(label=r"\??\C:\Windows\System32\drivers\winring0.sys", matched="x")
     tid, _, _ = ev.compute_target_id(it)
