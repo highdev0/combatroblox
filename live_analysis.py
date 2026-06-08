@@ -930,8 +930,10 @@ _SYSTEM_PROCESS_DIRS = {
         "securityhealthservice.exe", "securityhealthsystray.exe",
     )
 }
-# explorer.exe roda direto de %WINDIR% (não System32).
-_SYSTEM_PROCESS_DIRS["explorer.exe"] = (f"{_WINDIR}\\",)
+# explorer.exe roda direto de %WINDIR%\explorer.exe — match do ARQUIVO exato, não
+# do diretório: `c:\windows\` como prefixo deixaria passar um explorer.exe plantado
+# em c:\windows\temp\ (subdir de %WINDIR%). O legítimo é só esse caminho.
+_SYSTEM_PROCESS_DIRS["explorer.exe"] = (f"{_WINDIR}\\explorer.exe",)
 
 
 def scan_process_masquerade() -> dict:

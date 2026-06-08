@@ -72,6 +72,16 @@ def test_explorer_in_windir_clean_but_user_folder_flagged(monkeypatch):
     assert r["items"][0]["severity"] == "high"
 
 
+def test_explorer_in_windir_subdir_flagged(monkeypatch):
+    """Hardening: explorer.exe num SUBDIR de %WINDIR% (c:\\windows\\temp) não é
+    o legítimo (que é exatamente c:\\windows\\explorer.exe) — deve flaggar."""
+    procs = [_FakeProc(20, "explorer.exe", r"C:\Windows\Temp\explorer.exe")]
+    _patch_procs(monkeypatch, procs)
+    r = la.scan_process_masquerade()
+    assert r["status"] == "suspicious"
+    assert r["items"][0]["severity"] == "high"
+
+
 def test_non_system_name_ignored(monkeypatch):
     """Nome que não é de processo do SO não é deste scanner."""
     procs = [_FakeProc(16, "randomcheat.exe", r"C:\Users\x\Downloads\randomcheat.exe")]

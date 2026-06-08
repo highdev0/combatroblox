@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.30.1] - 2026-06-08
+
+**Auditoria de lógica + hardening do masquerading.**
+
+### Fixed
+
+- **Masquerade do `explorer.exe` agora exige o caminho exato**. O prefixo
+  permitido era o diretório `%WINDIR%\` (largo): um `explorer.exe` plantado em
+  `c:\windows\temp\` (subdir de %WINDIR%) passava por legítimo. Agora casa o
+  arquivo exato `%WINDIR%\explorer.exe`. Os demais processos do SO seguem por
+  diretório (System32/SysWOW64/WinSxS), que é o correto — lá moram vários exes.
+
+### Auditado (sem defeito)
+
+- **Confidence Engine** (cluster/veredito): 1 fonte nunca CONFIRMA sem evidência
+  critical; diminishing-returns por fonte + bônus de diversidade; agrupamento por
+  hash→path→executor com merge path↔executor. Lógica consistente.
+- **Ordem de execução**: `post_process_findings` (FP) roda ANTES do clustering —
+  downgrades e whitelist chegam ao veredito. Correto.
+- Sem mutable default args; `compute_target_id` com cascata correta.
+
 ## [3.30.0] - 2026-06-08
 
 **Anti-bypass**: detecção de process masquerading (cheat disfarçado de processo do Windows).
