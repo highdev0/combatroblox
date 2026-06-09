@@ -479,6 +479,27 @@ _USN_DATE_RE = re.compile(
     r"\d{1,2}/\d{1,2}/\d{4}[ T]\d{1,2}:\d{2}(?::\d{2})?"
     r"|\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(?::\d{2})?")
 
+# Janela (segundos) para considerar um par CREATE+DELETE como transitório.
+# Executor real roda por minutos/horas antes de ser deletado — gap >> 120s.
+# Arquivo que existiu por ≤2 min é provável artefato (teste, download
+# cancelado, AV quarentena-e-delete), não uso de cheat.
+_USN_TRANSIENT_WINDOW_SEC = 120
+
+
+def _usn_parse_ts(ts_str: str):
+    """Parseia timestamp do USN (vários formatos). Retorna datetime ou None."""
+    if not ts_str:
+        return None
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M",
+                "%m/%d/%Y %H:%M:%S", "%m/%d/%Y %H:%M",
+                "%d/%m/%Y %H:%M:%S", "%d/%m/%Y %H:%M",
+                "%Y-%m-%dT%H:%M:%S"):
+        try:
+            return datetime.strptime(ts_str, fmt)
+        except ValueError:
+            continue
+    return None
+
 
 def _usn_reason_from_line(line: str) -> int:
     """
@@ -515,6 +536,10 @@ def _usn_parse_line(line: str):
     """
     Converte uma linha do readjournal em _item, ou None se não interessa.
     Puro (sem I/O) pra ser testável sem admin.
+
+    Retorna dict com campos extras (prefixo ``_usn_``) que
+    ``_usn_merge_transient`` usa e que ``scan_usn_journal`` remove
+    antes de retornar.
     """
     mname = _USN_NAME_RE.search(line)
     if not mname:
@@ -529,13 +554,117 @@ def _usn_parse_line(line: str):
     reason = _usn_reason_from_line(reason_src)
     verbo, sev = _usn_classify(reason)
     mdate = _USN_DATE_RE.search(line)
-    return _item(
+    it = _item(
         label=f"{fname} — {verbo}",
         detail=f"Nome de executor {verbo} no volume (motivo=0x{reason:08x}, "
                f"match={kw}). USN sobrevive ao arquivo ser apagado.",
         severity=sev, matched=f"usn:{kw}",
         timestamp=mdate.group(0) if mdate else "",
     )
+    # Metadata interna — consumida por _usn_merge_transient, removida antes
+    # de retornar ao caller final.
+    it["_usn_fname"] = fname.lower()
+    it["_usn_reason"] = reason
+    return it
+
+
+def _usn_merge_transient(items, window_sec=_USN_TRANSIENT_WINDOW_SEC):
+    """
+    Detecta pares CREATE+DELETE do mesmo arquivo com gap ≤ ``window_sec``
+    e funde numa única entrada com severidade rebaixada.
+
+    Racional forense: executor real roda por minutos/horas antes de ser
+    deletado — o gap CREATE→DELETE é sempre >> 120 s. Um arquivo que
+    existiu por ≤ 2 min é provável artefato transitório (teste, download
+    cancelado, AV quarentena+delete), não uso de cheat.
+
+    A informação NÃO é escondida: o item fundido mantém o matched e o
+    timestamp, mas com severidade LOW e label explicativo, evitando que
+    infle o veredito.
+    """
+    if len(items) < 2:
+        return items
+
+    # Agrupa por filename (lowercase)
+    by_fname: dict[str, list[dict]] = {}
+    for it in items:
+        fn = it.get("_usn_fname", "")
+        by_fname.setdefault(fn, []).append(it)
+
+    result = []
+    for fn, group in by_fname.items():
+        if len(group) < 2:
+            result.extend(group)
+            continue
+
+        creates = [it for it in group if it.get("_usn_reason", 0) & _USN_FILE_CREATE]
+        deletes = [it for it in group if it.get("_usn_reason", 0) & _USN_FILE_DELETE]
+        others  = [it for it in group if it not in creates and it not in deletes]
+
+        if not creates or not deletes:
+            result.extend(group)
+            continue
+
+        # Tenta parear CREATE+DELETE mais próximos
+        used_c: set[int] = set()
+        used_d: set[int] = set()
+        for ci, c in enumerate(creates):
+            c_ts = _usn_parse_ts(c.get("timestamp", ""))
+            if c_ts is None or ci in used_c:
+                continue
+            best_di, best_gap = -1, float("inf")
+            for di, d in enumerate(deletes):
+                if di in used_d:
+                    continue
+                d_ts = _usn_parse_ts(d.get("timestamp", ""))
+                if d_ts is None:
+                    continue
+                gap = abs((d_ts - c_ts).total_seconds())
+                if gap <= window_sec and gap < best_gap:
+                    best_di, best_gap = di, gap
+            if best_di >= 0:
+                used_c.add(ci)
+                used_d.add(best_di)
+                d = deletes[best_di]
+                gap_int = int(best_gap)
+                merged = _item(
+                    label=f"{fn} — transitório (criado e apagado em {gap_int}s)",
+                    detail=f"Arquivo criado e excluído em {gap_int}s "
+                           f"(CREATE→DELETE ≤{window_sec}s). "
+                           f"Executor real roda por minutos — arquivo transitório "
+                           f"é provável artefato (teste, download cancelado, AV). "
+                           f"match={c.get('matched', '').replace('usn:', '')}",
+                    severity="low",
+                    matched=c.get("matched", ""),
+                    timestamp=d.get("timestamp", c.get("timestamp", "")),
+                )
+                merged["original_severity"] = d.get("severity", "high")
+                merged["fp_reason"] = (
+                    f"USN transitório: CREATE+DELETE em {gap_int}s "
+                    f"(janela ≤{window_sec}s)"
+                )
+                merged["_usn_fname"] = fn
+                merged["_usn_reason"] = 0
+                result.append(merged)
+
+        # Items não pareados mantêm severidade original
+        for ci, c in enumerate(creates):
+            if ci not in used_c:
+                result.append(c)
+        for di, d in enumerate(deletes):
+            if di not in used_d:
+                result.append(d)
+        result.extend(others)
+
+    return result
+
+
+def _usn_strip_internal(items):
+    """Remove campos internos ``_usn_*`` antes de devolver ao pipeline."""
+    for it in items:
+        it.pop("_usn_fname", None)
+        it.pop("_usn_reason", None)
+    return items
 
 
 def scan_usn_journal() -> dict:
@@ -641,6 +770,11 @@ def scan_usn_journal() -> dict:
             return _result("USN Journal", desc, [],
                            error="readjournal não retornou registros - rode a ferramenta "
                                  "como administrador (acesso ao journal exige elevação)")
+
+    # Pós-processamento: fundir pares CREATE+DELETE transitórios (≤120s)
+    # pra evitar FP de artefatos efêmeros (testes, downloads cancelados).
+    items = _usn_merge_transient(items)
+    items = _usn_strip_internal(items)
 
     return _result("USN Journal", desc, items)
 

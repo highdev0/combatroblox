@@ -636,6 +636,95 @@ def test_usn_degraded_format_still_flags():
     assert "atividade no journal" in it["label"]
 
 
+# ============= USN transient merge (FP de artefatos efêmeros) =============
+
+def test_usn_transient_create_delete_merged():
+    """Par CREATE+DELETE do mesmo arquivo com gap ≤120s é fundido numa
+    única entrada LOW com label explicativo. Pega o FP clássico:
+    teste/AV/download cancelado que gera create+delete rápidos."""
+    import extra_forensics as ef
+    c = ef._usn_parse_line("100,solara.exe,0x00000100,2026-06-03 14:34:48")
+    d = ef._usn_parse_line("200,solara.exe,0x80000200,2026-06-03 14:34:58")
+    assert c is not None and d is not None
+
+    merged = ef._usn_merge_transient([c, d])
+    assert len(merged) == 1, f"esperava 1 item fundido, veio {len(merged)}"
+    m = merged[0]
+    assert m["severity"] == "low"
+    assert "transitório" in m["label"]
+    assert "10s" in m["label"]
+    assert m["matched"].startswith("usn:")
+    assert m.get("original_severity") == "high"
+    assert m.get("fp_reason") is not None
+
+
+def test_usn_real_delete_outside_window():
+    """DELETE com CREATE distante (>120s) mantém severidade HIGH intacta.
+    Cenário real: cheater roda executor por horas e deleta antes da SS."""
+    import extra_forensics as ef
+    c = ef._usn_parse_line("100,krnl.exe,0x00000100,2026-06-03 10:00:00")
+    d = ef._usn_parse_line("200,krnl.exe,0x80000200,2026-06-03 14:34:58")
+    assert c is not None and d is not None
+
+    result = ef._usn_merge_transient([c, d])
+    assert len(result) == 2, "par fora da janela NÃO deve ser fundido"
+    sevs = {it["severity"] for it in result}
+    assert "high" in sevs, "DELETE deve manter HIGH"
+    assert "medium" in sevs, "CREATE deve manter MEDIUM"
+
+
+def test_usn_delete_only_preserved():
+    """Só DELETE, sem CREATE correspondente — mantém HIGH.
+    Cenário real: CREATE já girou fora do buffer circular, só DELETE sobrou."""
+    import extra_forensics as ef
+    d = ef._usn_parse_line("200,solara.exe,0x80000200,2026-06-03 14:34:58")
+    assert d is not None
+
+    result = ef._usn_merge_transient([d])
+    assert len(result) == 1
+    assert result[0]["severity"] == "high"
+
+
+def test_usn_create_only_preserved():
+    """Só CREATE, sem DELETE — mantém MEDIUM.
+    Executor pode ainda estar no disco, ou delete não foi gravado."""
+    import extra_forensics as ef
+    c = ef._usn_parse_line("100,fluxus.exe,0x00000100,2026-06-03 14:34:48")
+    assert c is not None
+
+    result = ef._usn_merge_transient([c])
+    assert len(result) == 1
+    assert result[0]["severity"] == "medium"
+
+
+def test_usn_no_timestamp_items_preserved():
+    """Items sem timestamp parseável não devem ser fundidos (sem como medir gap)."""
+    import extra_forensics as ef
+    c = ef._usn_parse_line("100,krnl.exe,0x00000100,SEM_DATA")
+    d = ef._usn_parse_line("200,krnl.exe,0x80000200,SEM_DATA")
+    assert c is not None and d is not None
+
+    result = ef._usn_merge_transient([c, d])
+    assert len(result) == 2, "sem timestamp = sem merge"
+
+
+def test_usn_parse_ts_formats():
+    """_usn_parse_ts cobre os formatos de data que o fsutil emite."""
+    import extra_forensics as ef
+    # ISO
+    ts = ef._usn_parse_ts("2026-06-03 14:34:48")
+    assert ts is not None and ts.hour == 14 and ts.second == 48
+    # US-style
+    ts = ef._usn_parse_ts("6/3/2026 14:34:48")
+    assert ts is not None and ts.month == 6
+    # ISO com T
+    ts = ef._usn_parse_ts("2026-06-03T14:34:48")
+    assert ts is not None
+    # Inválido
+    assert ef._usn_parse_ts("") is None
+    assert ef._usn_parse_ts("nao-e-data") is None
+
+
 def test_script_hash_match_logic(tmp_path, monkeypatch):
     """Plantando um hash conhecido, um arquivo com aquele conteúdo é pego."""
     import extra_forensics, hashlib

@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.32.0] - 2026-06-09
+
+### Fixed
+- **Falso positivo do USN Journal corrigido**: Arquivos efêmeros de executor criados e apagados rapidamente (≤120s de intervalo) agora são fundidos e rebaixados para severidade LOW. Isso impede que artefatos de testes, downloads cancelados ou quarentenas do antivírus inflem o veredito, enquanto mantém a detecção real (cheaters que rodam o executor por minutos) com severidade HIGH.
+
 ## [3.31.0] - 2026-06-09
 
 **Robustez + hardening + tooling de qualidade.**
