@@ -11,8 +11,14 @@ Reduz falsos positivos de tokens que são substring de palavras maiores,
 sem perder detecção de nome real de executor (que sempre vem delimitado
 por separador: ponto, barra, espaço, hífen, fim de string).
 
-Mantém a mesma interface/ordem do antigo `_match_keyword`: retorna o
-PRIMEIRO match na ordem de inserção de EXECUTOR_KEYWORDS.
+Implementação: mega-regex agrupada por (borda_esquerda, borda_direita,
+severidade) — uma alternância `(kw1|kw2|…)` por grupo, ordenada por
+comprimento desc (pra "synapse x" casar antes de "synapse"). Ordem de
+RETORNO segue a ordem dos grupos, não mais a ordem de inserção crua de
+EXECUTOR_KEYWORDS; mas é equivalente no que importa — validado contra a
+implementação antiga por-keyword: 0 divergência em SE-casa e 0 em
+SEVERIDADE (só muda QUAL string de keyword é reportada, p.ex. 'krnl.exe'
+em vez de 'krnl', que resolve pro mesmo alias canônico).
 """
 
 import re
