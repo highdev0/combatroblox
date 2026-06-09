@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.34.0] - 2026-06-09
+
+**Anti-bypass**: detecção de DLL sideloading / proxy DLL no Roblox.
+
+### Added
+
+- **DLL sideloading no Roblox** (`live_analysis.py` → `scan_roblox_dll_sideload`):
+  detecta DLL com nome de DLL do sistema (`version.dll`, `dinput8.dll`,
+  `d3d9.dll`, `winhttp.dll`, `dwmapi.dll`…) plantada dentro da pasta de
+  instalação do Roblox. A ordem de busca de DLL do Windows carrega a do
+  diretório do `.exe` ANTES da System32 — então uma proxy DLL ali é carregada
+  quando o Roblox abre, reexportando as funções reais e injetando o cheat. NÃO
+  precisa patchear o Roblox, então o `scan_roblox_launcher_integrity` (que checa
+  a assinatura do `.exe`) não pega. Mapeia pro source `live_dll_injection` (0.90).
+
+### Por quê
+
+É um dos vetores de injeção mais limpos e ensinados — o Roblox roda intacto e
+assinado, mas carrega código injetado via search-order hijack. FP ~zero: o
+Roblox nunca traz essas DLLs de sistema na pasta de versão (vêm da System32), e
+o gate de assinatura deixa passar a única que ele embarca legitimamente
+(`d3dcompiler_47.dll`, assinada pela Microsoft). Só flaga DLL de sistema
+NÃO-ASSINADA na pasta do Roblox. Validado no PC real: 0 falso positivo.
+
 ## [3.33.3] - 2026-06-09
 
 ### Fixed

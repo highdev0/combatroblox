@@ -995,6 +995,88 @@ def scan_process_masquerade() -> dict:
     )
 
 
+# ============================ DLL sideloading no Roblox (anti-bypass) ============================
+
+# DLLs FORNECIDAS pelo Windows que o RobloxPlayerBeta importa por NOME. A ordem
+# de busca de DLL do Windows carrega a do diretório do .exe ANTES da System32 —
+# então plantar uma destas ao lado do RobloxPlayerBeta faz o Windows carregar a
+# maliciosa quando o Roblox abre. A DLL proxy reexporta as funções reais (pra
+# não quebrar o Roblox) E injeta o cheat. NÃO precisa patchear o Roblox, então
+# o launcher integrity (que checa a assinatura do .exe) não pega.
+#
+# Roblox legítimo NUNCA traz nenhuma destas na pasta de versão — vêm da System32.
+# Uma destas ao lado do RobloxPlayerBeta, com assinatura QUEBRADA, é proxy DLL.
+_SIDELOAD_DLL_NAMES = {
+    # Proxy clássicos (apps de jogo importam, fáceis de reexportar)
+    "version.dll", "dinput8.dll", "dinput.dll", "winmm.dll", "dwmapi.dll",
+    "winhttp.dll", "wininet.dll", "uxtheme.dll", "dbghelp.dll", "msimg32.dll",
+    "profapi.dll", "cryptbase.dll", "secur32.dll", "userenv.dll",
+    "iphlpapi.dll", "netapi32.dll", "wtsapi32.dll", "apphelp.dll",
+    "windowscodecs.dll", "textinputframework.dll", "propsys.dll",
+    # Runtimes gráficos (Roblox usa; gate de assinatura evita FP em DLL legítima)
+    "d3d9.dll", "d3d10.dll", "d3d11.dll", "d3d12.dll", "dxgi.dll",
+    "d3dcompiler_47.dll", "dwrite.dll", "opengl32.dll", "vulkan-1.dll",
+}
+
+
+def scan_roblox_dll_sideload() -> dict:
+    """
+    Detecta DLL SIDELOADING/PROXY ao lado do RobloxPlayerBeta — anti-bypass.
+
+    Procura DLLs com nome de DLL do SISTEMA (version.dll, dinput8.dll, d3d9.dll…)
+    dentro da pasta de instalação do Roblox. O Roblox legítimo não traz nenhuma
+    delas — vêm da System32. Uma ali com ASSINATURA QUEBRADA (não-assinada) é
+    uma proxy DLL plantada pra injetar quando o Roblox carrega.
+
+    Anti-FP (mesma doutrina do launcher integrity):
+      - Só flaga assinatura COMPROVADAMENTE quebrada (False), nunca None.
+      - DLL gráfica legítima eventualmente embarcada é assinada → não cai.
+      - Fora da pasta do Roblox não é escopo deste scanner.
+    """
+    items = []
+    seen = set()
+    roblox_root = _roblox_official_root()
+    if not os.path.isdir(roblox_root):
+        return _result(
+            "DLL sideloading no Roblox (anti-bypass)",
+            "DLL proxy de sistema plantada ao lado do RobloxPlayerBeta pra injetar",
+            [], error="Roblox não instalado em %LOCALAPPDATA%\\Roblox")
+
+    for dirpath, dirnames, filenames in os.walk(roblox_root):
+        if dirpath[len(roblox_root):].count(os.sep) > 5:
+            dirnames[:] = []
+            continue
+        for f in filenames:
+            if f.lower() not in _SIDELOAD_DLL_NAMES:
+                continue
+            p = os.path.join(dirpath, f)
+            if p.lower() in seen:
+                continue
+            seen.add(p.lower())
+            if _is_dll_signed(p) is False:  # comprovadamente não-assinada = proxy
+                try:
+                    mtime = _fmt_ts(os.path.getmtime(p))
+                except OSError:
+                    mtime = ""
+                items.append(_item(
+                    label=f"DLL sideloading no Roblox: {f}",
+                    detail=f"{p}\nDLL com nome de DLL do SISTEMA ({f}) dentro da pasta "
+                           f"de instalação do Roblox, NÃO-ASSINADA. O Roblox não traz "
+                           f"essa DLL — ela vem da System32. Plantada aqui, o Windows a "
+                           f"carrega ANTES da System32 quando o Roblox abre (DLL search "
+                           f"order), injetando o cheat sem patchear o Roblox. Proxy DLL.",
+                    severity="high",
+                    matched=f"sideload:{f.lower()}",
+                    timestamp=mtime,
+                ))
+
+    return _result(
+        "DLL sideloading no Roblox (anti-bypass)",
+        "DLL proxy de sistema plantada ao lado do RobloxPlayerBeta pra injetar na inicialização",
+        items,
+    )
+
+
 ALL_LIVE_ANALYSIS_SCANNERS = [
     scan_roblox_dll_injection,
     scan_process_tree,
@@ -1003,4 +1085,5 @@ ALL_LIVE_ANALYSIS_SCANNERS = [
     scan_roblox_launcher_integrity,
     scan_suspended_processes,
     scan_process_masquerade,
+    scan_roblox_dll_sideload,
 ]

@@ -40,9 +40,10 @@ Sem admin, "nada encontrado" não inocenta — é inconclusivo. O programa avisa
 - Anti-forense — Prefetch/SysMain off, VSS wipe, log de Segurança limpo, PowerShell
   apagado, USN journal (pega exec que foi deletado).
 - Anti-bypass (truques dos cursos de telagem) — processo suspenso, processo
-  disfarçado de sistema (svchost.exe/dwm.exe rodando de pasta de usuário), cheat
-  em pendrive, outra conta de Windows, Defender adulterado, relógio voltado pra
-  trás e limpadores/secure-delete que rodaram.
+  disfarçado de sistema (svchost.exe/dwm.exe rodando de pasta de usuário), DLL
+  sideloading no Roblox (version.dll/dinput8.dll plantada ao lado do
+  RobloxPlayerBeta pra injetar no boot), cheat em pendrive, outra conta de
+  Windows, Defender adulterado, relógio voltado pra trás e limpadores/secure-delete.
 
 As evidências do mesmo executor são agrupadas num veredito por target (Confidence
 Engine), com % de confiança, em vez de cuspir 50 hits soltos pra você interpretar.

@@ -483,6 +483,7 @@ def _source_slug_from_name(scanner_name: str) -> str:
         ("exclusão",              "defender_tampering"),
         ("relógio",               "clock_tampering"),
         ("dll injection",         "live_dll_injection"),
+        ("sideload",              "live_dll_injection"),
         ("process tree",          "live_processes"),
         ("process",               "live_processes"),
         ("usn",                   "usn_journal"),
