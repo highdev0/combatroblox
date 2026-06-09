@@ -182,6 +182,14 @@ def _removable_drive_letters() -> list:
     return out
 
 
+def _walk_drive(drive):
+    """os.walk isolado num ponto único, mockável nos testes. Sem isso, testar o
+    scanner exige escrever um arquivo com nome de executor real (ex.: solara.exe)
+    no disco — que cai no USN journal/Prefetch do host e vira falso positivo no
+    próprio Telador quando ele roda depois."""
+    return os.walk(drive)
+
+
 def scan_removable_drives() -> dict:
     """Varre o conteúdo de unidades REMOVÍVEIS montadas agora, procurando
     arquivo/pasta com nome de executor conhecido. Pega o cheat que está no
@@ -193,7 +201,7 @@ def scan_removable_drives() -> dict:
     seen = set()
     for drive in _removable_drive_letters():
         try:
-            for dirpath, dirnames, filenames in os.walk(drive):
+            for dirpath, dirnames, filenames in _walk_drive(drive):
                 if dirpath[len(drive):].count(os.sep) > _MAX_DEPTH:
                     dirnames[:] = []
                     continue

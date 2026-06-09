@@ -47,15 +47,17 @@ def test_usb_history_item_none_skipped():
 
 # ---------------- conteúdo de drive removível ----------------
 
-def _make_exe(path):
-    with open(path, "wb") as f:
-        f.write(b"MZ" + b"\x00" * 32)
+# Os arquivos do drive são injetados via _walk_drive em vez de escritos no disco
+# de verdade: um arquivo com nome de executor real (solara.exe) criado num tmp
+# do host cai no USN journal e vira falso positivo no próprio Telador depois.
+def _fake_drive(files):
+    return lambda drive: iter([(drive, [], list(files))])
 
 
-def test_removable_drives_flags_executor(monkeypatch, tmp_path):
-    drive = str(tmp_path) + os.sep
-    _make_exe(os.path.join(str(tmp_path), "solara.exe"))
+def test_removable_drives_flags_executor(monkeypatch):
+    drive = "X:\\"
     monkeypatch.setattr(rm, "_removable_drive_letters", lambda: [drive])
+    monkeypatch.setattr(rm, "_walk_drive", _fake_drive(["solara.exe"]))
 
     r = rm.scan_removable_drives()
     assert r["status"] == "suspicious"
@@ -65,10 +67,10 @@ def test_removable_drives_flags_executor(monkeypatch, tmp_path):
     assert "solara" in it["matched"].lower()
 
 
-def test_removable_drives_ignores_neutral_app(monkeypatch, tmp_path):
-    drive = str(tmp_path) + os.sep
-    _make_exe(os.path.join(str(tmp_path), "meu_jogo.exe"))  # nome neutro
+def test_removable_drives_ignores_neutral_app(monkeypatch):
+    drive = "X:\\"
     monkeypatch.setattr(rm, "_removable_drive_letters", lambda: [drive])
+    monkeypatch.setattr(rm, "_walk_drive", _fake_drive(["meu_jogo.exe"]))  # nome neutro
 
     r = rm.scan_removable_drives()
     assert r["status"] == "clean"
