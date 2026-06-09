@@ -17,6 +17,8 @@ Cada sinal pesa por idade — combinação = HIGH automático.
 import os
 import re
 import subprocess
+
+import win_tools
 from datetime import datetime
 
 try:
@@ -104,7 +106,7 @@ def _get_volume_creation(drive="C:"):
     """fsutil fsinfo ntfsinfo c: mostra quando o volume foi criado."""
     try:
         result = subprocess.run(
-            ["fsutil", "fsinfo", "ntfsinfo", drive],
+            [win_tools.tool("fsutil.exe"), "fsinfo", "ntfsinfo", drive],
             capture_output=True, text=True, timeout=10,
             encoding="cp850", errors="replace",
         )

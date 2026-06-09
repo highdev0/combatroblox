@@ -15,6 +15,7 @@ from ctypes import wintypes
 from datetime import datetime
 import functools
 
+import debug
 from database import (
     ROBLOX_PROCESS_NAMES,
     TRUSTED_DLL_PATHS,
@@ -469,8 +470,8 @@ def scan_overlay_windows() -> dict:
                        + (f" · título: '{title}'" if title else " · sem título"),
                 severity="medium", matched=f"overlay:{pname}",
             ))
-        except Exception:
-            pass
+        except Exception as e:
+            debug.dbg(f"overlay scan falhou em {pname}", e)
         return True
 
     try:

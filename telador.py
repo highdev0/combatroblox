@@ -57,6 +57,7 @@ import redaction
 import report
 import report_md
 import evidence as ev_engine
+import debug
 
 
 # --------------------------- ANSI / UTF-8 setup ---------------------------
@@ -466,6 +467,9 @@ def main():
                         help="Não pedir permissão de administrador (UAC). Roda com cobertura limitada.")
     parser.add_argument("--_relaunched",   action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--no-parallel",   action="store_true", help="Rodar sequencial (debug)")
+    parser.add_argument("--verbose", "-v",  action="store_true",
+                        help="Loga no stderr as exceções engolidas pelos leitores de artefato "
+                             "(diagnostica scanner que falha calado e reduz cobertura).")
     parser.add_argument("--threads",       type=int, default=4, help="Threads em paralelo (default 4)")
     parser.add_argument("--json",          action="store_true", help="Também salvar relatório JSON")
     parser.add_argument("--strict-scripts",action="store_true",
@@ -476,6 +480,9 @@ def main():
                         help="Código de verificação ditado pelo supervisor no início da SS "
                              "(prova que o relatório é desta sessão ao vivo)")
     args = parser.parse_args()
+
+    if args.verbose:
+        debug.enable()
 
     # Auto-elevação: tenta virar admin via UAC ANTES de tudo (a não ser que
     # seja --update-sigs, que não precisa, ou o usuário tenha pedido
@@ -614,6 +621,16 @@ def main():
         findings = run_scanners_parallel(chain, only=only_list, max_workers=args.threads,
                                          high_only=args.high_only, on_result=watch_cb)
 
+    # Aviso de cobertura: scanner que deu status="error" não contribuiu com a
+    # fonte dele. Um "LIMPO" com fontes faltando é cobertura reduzida, não
+    # inocência — o supervisor precisa saber. (Detalhes só com --verbose.)
+    errored = [f for f in findings if f.get("status") == "error"]
+    if errored:
+        print(f"\n{YELLOW}[!]{RESET} {BOLD}{len(errored)} checagem(ns) falharam{RESET} "
+              f"{GREY}— cobertura reduzida. Rode com --verbose pra ver o motivo.{RESET}")
+        for f in errored:
+            print(f"      {YELLOW}● {f.get('name', '?')}{RESET} {GREY}— {f.get('error', 'erro desconhecido')}{RESET}")
+
     # Filtro de falsos positivos (a menos que --strict)
     fp_stats = None
     if not args.strict:
@@ -717,11 +734,13 @@ def main():
         )
         print(f"{GREEN}✓ Relatório Markdown:{RESET} {md_path}  {GREY}(colável no Discord){RESET}")
 
-    # Salva .tsr (formato comparável + assinado HMAC)
+    # Salva .tsr (formato comparável + selo HMAC de integridade — detecta
+    # adulteração casual, não é prova contra um forjador motivado; ver
+    # report_signing.py)
     tsr_path = None
     if args.save_tsr:
         tsr_path = diff_tool.save_tsr(findings, sys_info, args.save_tsr)
-        print(f"{GREEN}✓ Relatório .tsr:{RESET} {tsr_path}  {GREY}(assinado HMAC){RESET}")
+        print(f"{GREEN}✓ Relatório .tsr:{RESET} {tsr_path}  {GREY}(selo HMAC de integridade){RESET}")
 
     # Diff contra .tsr anterior
     if args.diff:

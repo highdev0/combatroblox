@@ -14,6 +14,8 @@ admin (só SYSTEM lê), então a API é o caminho que de fato funciona em produ�
 import os
 import subprocess
 
+import win_tools
+
 import matching
 from database import DEFENDER_EXCLUSION_DEV_PATHS
 
@@ -144,7 +146,7 @@ def _query_defender():
     )
     try:
         r = subprocess.run(
-            ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps],
+            [win_tools.powershell(), "-NoProfile", "-NonInteractive", "-Command", ps],
             capture_output=True, text=True, timeout=30,
             encoding="utf-8", errors="replace",
             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),

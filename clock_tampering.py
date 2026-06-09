@@ -17,6 +17,8 @@ import subprocess
 import xml.etree.ElementTree as ET
 from datetime import datetime
 
+import win_tools
+
 
 def _result(name, description, items, error=None):
     if error:
@@ -171,7 +173,7 @@ def _query_4616():
     Retorna lista de dicts, [] se sem eventos, None se falhar/sem acesso."""
     try:
         r = subprocess.run(
-            ["wevtutil", "qe", "Security",
+            [win_tools.tool("wevtutil.exe"), "qe", "Security",
              "/q:*[System[(EventID=4616)]]", "/c:200", "/rd:true", "/f:xml"],
             capture_output=True, timeout=25,
         )

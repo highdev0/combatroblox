@@ -8,6 +8,8 @@ Network forensics:
 import os
 import re
 import subprocess
+
+import win_tools
 import matching
 
 from database import SUSPICIOUS_DOMAINS, EXECUTOR_PROCESS_NAMES
@@ -116,7 +118,7 @@ def scan_dns_cache() -> dict:
     """ipconfig /displaydns mostra todos os domínios resolvidos recentemente."""
     try:
         result = subprocess.run(
-            ["ipconfig", "/displaydns"],
+            [win_tools.tool("ipconfig.exe"), "/displaydns"],
             capture_output=True, text=True, timeout=15,
             encoding="cp850", errors="replace",
         )

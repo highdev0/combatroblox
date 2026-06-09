@@ -30,6 +30,7 @@ import io
 import json
 import os
 import urllib.request
+from urllib.parse import urlparse
 
 # Raw do arquivo CANÔNICO de assinaturas no repo oficial. HTTPS = GitHub
 # autenticado. É `signatures.dist.json` (versionado no repo), separado do
@@ -65,6 +66,14 @@ def update_signatures(url: str = None, dest: str = None,
     local atual só é sobrescrita se o download for um JSON válido.
     """
     url = url or SIGNATURES_URL
+    # A base baixada vira regra de detecção. Sem TLS, um MITM (ou `file:` /
+    # `http:` apontado de fora) poderia injetar assinaturas — falso positivo
+    # (acusar inocente) ou falso negativo (deixar cheat passar). Exige HTTPS;
+    # só libera http pra loopback (mirror local/teste, onde não há MITM).
+    _parsed = urlparse(url)
+    _loopback = (_parsed.hostname or "") in ("127.0.0.1", "localhost", "::1")
+    if not (_parsed.scheme == "https" or (_parsed.scheme == "http" and _loopback)):
+        return False, f"URL de assinaturas precisa ser https:// (recebido: {url[:40]})"
     if dest is None:
         try:
             import database

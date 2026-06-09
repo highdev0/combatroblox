@@ -24,6 +24,8 @@ import threading
 import subprocess
 from datetime import datetime, timezone
 
+import win_tools
+
 try:
     import winreg
     HAS_WINREG = True
@@ -412,7 +414,7 @@ def scan_anti_forensics() -> dict:
     # manutenção/reinstalação — por isso MEDIUM, não HIGH.
     try:
         r = subprocess.run(
-            ["wevtutil", "qe", "Security",
+            [win_tools.tool("wevtutil.exe"), "qe", "Security",
              "/q:*[System[(EventID=1102)]]", "/c:3", "/rd:true", "/f:text"],
             capture_output=True, timeout=10,
         )
@@ -546,7 +548,7 @@ def scan_usn_journal() -> dict:
 
     # --- (b) queryjournal: confirma journal ativo (não precisa admin) ---
     try:
-        q = subprocess.run(["fsutil", "usn", "queryjournal", USN_VOLUME],
+        q = subprocess.run([win_tools.tool("fsutil.exe"), "usn", "queryjournal", USN_VOLUME],
                            capture_output=True, timeout=10)
     except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as e:
         return _result("USN Journal", desc, [], error=f"fsutil indisponível: {e}")
@@ -568,7 +570,7 @@ def scan_usn_journal() -> dict:
     # --- (a) readjournal: lê os registros (precisa admin) ---
     try:
         proc = subprocess.Popen(
-            ["fsutil", "usn", "readjournal", USN_VOLUME, "csv"],
+            [win_tools.tool("fsutil.exe"), "usn", "readjournal", USN_VOLUME, "csv"],
             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     except (FileNotFoundError, OSError) as e:
         return _result("USN Journal", desc, [], error=f"fsutil indisponível: {e}")
@@ -774,7 +776,7 @@ def _oldest_event_age_hours(log_name: str):
     """
     try:
         r = subprocess.run(
-            ["wevtutil", "qe", log_name, "/c:1", "/rd:false", "/f:text"],
+            [win_tools.tool("wevtutil.exe"), "qe", log_name, "/c:1", "/rd:false", "/f:text"],
             capture_output=True, timeout=15)
     except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
         return None
@@ -865,7 +867,7 @@ def scan_shadow_copy_wipe() -> dict:
 
     try:
         r = subprocess.run(
-            ["wevtutil", "qe", "Application",
+            [win_tools.tool("wevtutil.exe"), "qe", "Application",
              "/q:*[System[Provider[@Name='VSS'] and (EventID=8224)]]",
              "/c:30", "/rd:true", "/f:text"],
             capture_output=True, timeout=15)

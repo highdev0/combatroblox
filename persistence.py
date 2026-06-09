@@ -12,6 +12,8 @@ Cobre:
 
 import os
 import subprocess
+
+import win_tools
 from datetime import datetime, timedelta
 
 from database import (
@@ -196,7 +198,7 @@ def scan_scheduled_tasks() -> dict:
         # outros). utf-8 era errado — perdia acentos em task names.
         # text=False + decode manual com fallback é mais robusto.
         result = subprocess.run(
-            ["schtasks", "/query", "/fo", "csv", "/v"],
+            [win_tools.tool("schtasks.exe"), "/query", "/fo", "csv", "/v"],
             capture_output=True, timeout=20,
         )
         # Tenta cp850 (DOS BR), fallback cp1252 (Win ANSI), fallback utf-8

@@ -12,6 +12,9 @@ import struct
 import subprocess
 from datetime import datetime, timedelta
 
+import debug
+import win_tools
+
 try:
     import winreg
     HAS_WINREG = True
@@ -82,7 +85,7 @@ def scan_amcache():
     # Tenta montar
     try:
         load = subprocess.run(
-            ["reg", "load", AMCACHE_TEMP_HIVE, AMCACHE_PATH],
+            [win_tools.tool("reg.exe"), "load", AMCACHE_TEMP_HIVE, AMCACHE_PATH],
             capture_output=True, text=True, timeout=15,
         )
     except (OSError, subprocess.TimeoutExpired) as e:  # OSError cobre FileNotFound + winerror genérico
@@ -101,23 +104,23 @@ def scan_amcache():
                                   r"TempAmcache\Root\InventoryApplicationFile")
             items.extend(_walk_amcache_inventory(root))
             winreg.CloseKey(root)
-        except OSError:
-            pass
+        except OSError as e:
+            debug.dbg("Amcache: InventoryApplicationFile (Win10/11) ilegível", e)
 
         # Win7 fallback: Root\File\<volume>\<id>
         try:
             root = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"TempAmcache\Root\File")
             items.extend(_walk_amcache_legacy(root))
             winreg.CloseKey(root)
-        except OSError:
-            pass
+        except OSError as e:
+            debug.dbg("Amcache: Root\\File (Win7 legacy) ilegível", e)
 
     finally:
         # reg unload pode falhar (reg.exe sumiu/timeout) — engole sem propagar
         # pra não impedir o retorno do scanner. Hive ficaria montada até reboot,
         # mas o scanner ainda devolve os items que conseguiu coletar.
         try:
-            subprocess.run(["reg", "unload", AMCACHE_TEMP_HIVE],
+            subprocess.run([win_tools.tool("reg.exe"), "unload", AMCACHE_TEMP_HIVE],
                            capture_output=True, timeout=15)
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
             pass
