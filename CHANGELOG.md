@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.33.1] - 2026-06-09
+
+### Fixed
+- **USN Journal False Positive**: Corrigido um bug onde arquivos não-executáveis com sufixos simulando executores (ex: `solara.exe.ps1` ou `krnl.exe.tmp`) tinham o nome truncado pelo regex e geravam Falsos Positivos de remoção de executor.
+
 ## [3.33.0] - 2026-06-09
 
 **Performance extrema e Design Premium (Offline Standalone).**

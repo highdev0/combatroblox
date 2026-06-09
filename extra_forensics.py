@@ -473,7 +473,7 @@ _USN_RENAME_NEW = 0x00002000
 _USN_STRUCT_BITS = (_USN_FILE_CREATE | _USN_FILE_DELETE
                     | _USN_RENAME_OLD | _USN_RENAME_NEW)
 
-_USN_NAME_RE = re.compile(r"[A-Za-z0-9_.\-]+\.(?:exe|dll|luau|lua|sys)", re.IGNORECASE)
+_USN_NAME_RE = re.compile(r',"?([^,]+\.(?:exe|dll|luau|lua|sys))"?,', re.IGNORECASE)
 _USN_HEX_RE = re.compile(r"0x([0-9a-fA-F]{1,8})\b")
 _USN_DATE_RE = re.compile(
     r"\d{1,2}/\d{1,2}/\d{4}[ T]\d{1,2}:\d{2}(?::\d{2})?"
@@ -544,7 +544,7 @@ def _usn_parse_line(line: str):
     mname = _USN_NAME_RE.search(line)
     if not mname:
         return None
-    fname = mname.group(0)[:80]
+    fname = mname.group(1)[:80]
     kw, _sev = _match(fname)
     if not kw:
         return None
