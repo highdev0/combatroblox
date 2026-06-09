@@ -23,19 +23,29 @@ _PATTERNS = None
 
 
 def _compile():
-    """Compila um pattern word-boundary por keyword (uma vez, cacheado)."""
+    """Compila um pattern word-boundary agrupado por tipo de borda e severidade.
+    Mega-regex: (kw1|kw2|kw3) roda milhares de vezes mais rápido que um loop de regexes."""
     global _PATTERNS
-    pats = []
+    groups = {}
     for kw, sev in EXECUTOR_KEYWORDS.items():
         if not kw:
             continue
         esc = re.escape(kw)
-        # \b só faz sentido quando a borda do keyword é alfanumérica. Se o
-        # keyword começa/termina com símbolo (ex.: ".exe" hipotético), a borda
-        # vira substring naquele lado — comportamento correto.
         pre = r"\b" if kw[0].isalnum() else ""
         suf = r"\b" if kw[-1].isalnum() else ""
-        pats.append((re.compile(pre + esc + suf, re.IGNORECASE), kw, sev))
+        
+        key = (pre, suf, sev)
+        if key not in groups:
+            groups[key] = []
+        groups[key].append(esc)
+        
+    pats = []
+    for (pre, suf, sev), kws in groups.items():
+        # Sort by length descending so longer keywords match first ("synapse x" before "synapse")
+        kws.sort(key=len, reverse=True)
+        pattern_str = pre + r"(" + r"|".join(kws) + r")" + suf
+        pats.append((re.compile(pattern_str, re.IGNORECASE), sev))
+        
     _PATTERNS = pats
     return pats
 
@@ -48,13 +58,14 @@ def invalidate():
 
 
 def match_keyword(text):
-    """Retorna (keyword, severity) do primeiro match, ou (None, None)."""
+    """Retorna (keyword_original, severity) do primeiro match, ou (None, None)."""
     if not text:
         return None, None
     pats = _PATTERNS if _PATTERNS is not None else _compile()
-    for pat, kw, sev in pats:
-        if pat.search(text):
-            return kw, sev
+    for pat, sev in pats:
+        m = pat.search(text)
+        if m:
+            return m.group(1).lower(), sev
     return None, None
 
 

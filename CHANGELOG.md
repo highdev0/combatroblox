@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.33.0] - 2026-06-09
+
+**Performance extrema e Design Premium (Offline Standalone).**
+
+### Added
+- **Nova camada Visual Premium**: Extração de lógica CSS massiva e SVGs inline de `report.py` para um novo módulo limpo `report_assets.py`. Implementação de Aesthetics Premium como efeitos de Glassmorphism, texturas de cores vibrantes modernas e stack tipográfico novo, garantindo UI de ponta mantendo operação 100% offline.
+- **Mega-Regex Optimization**: Agrupamento lógico de expressões regulares usando chaves de borda (word-boundary) em `matching.py`. Corte maciço na carga do loop de busca do pattern e aceleração de performance em alvos gigantes (como Amcache, Prefetch e logs do roblox).
+
 ## [3.32.0] - 2026-06-09
 
 ### Fixed
