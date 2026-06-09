@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.30.2] - 2026-06-09
+
+**Segurança: corrige XSS / forja de veredito no dashboard ao vivo.**
+
+### Fixed
+
+- **XSS no painel `--watch`** (`watch_server.py`): `label`, `kind`, `verdict` e
+  `sources` de cluster — além do nome do scanner — eram injetados via `innerHTML`
+  sem escape. Esses campos derivam do nome de arquivo do disco do suspeito
+  (`evidence.py`, `os.path.basename` do path), que é controlado por ele e é
+  exatamente o que o scanner de *executor renomeado* coleta. Um arquivo
+  renomeado pra conter HTML/JS no nome executava JS no navegador do supervisor
+  durante a SS e podia reescrever o painel pra mostrar "PC LIMPO", **forjando o
+  veredito**. O relatório estático (`report.py`) já escapava esses campos; só o
+  caminho ao vivo estava exposto. Adicionado `esc()` no JS do painel envolvendo
+  todos os campos dinâmicos, + teste de regressão (`test_watch.py`).
+
 ## [3.30.1] - 2026-06-08
 
 **Auditoria de lógica + hardening do masquerading.**
