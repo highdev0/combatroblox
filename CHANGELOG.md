@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.33.3] - 2026-06-09
+
+### Fixed
+- **Coerência de versão**: o banner do console (`telador.py`) tinha ficado em
+  `v3.31.0` enquanto `version_info.txt`, CHANGELOG e a tag já estavam em 3.33.x —
+  as releases v3.32/v3.33 esqueceram de bumpar o banner. O binário publicado
+  mostrava a versão errada ao lado do SHA256 durante a SS, furando o fluxo de
+  confiança "compare o SHA com a release oficial". Agora a versão bate em todo
+  lugar (banner, metadados do exe, CHANGELOG, tag, badge e timeline do site).
+
 ## [3.33.2] - 2026-06-09
 
 ### Fixed
