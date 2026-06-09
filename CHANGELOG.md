@@ -2,6 +2,38 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.31.0] - 2026-06-09
+
+**Robustez + hardening + tooling de qualidade.**
+
+### Added
+
+- **`--verbose` / `-v`**: loga no stderr as exceções que os leitores de artefato
+  normalmente engolem (`except/pass`). Diagnostica scanner que falha calado.
+- **Aviso de cobertura reduzida**: se algum scanner termina com erro, o telador
+  avisa no resumo (`N checagem(ns) falharam — cobertura reduzida`). Um "LIMPO"
+  com fontes faltando é cobertura reduzida, não inocência.
+- **CI com `ruff`** (lint de bug) + **workflow de release** que builda o
+  `telador.exe` no `windows-latest` e publica no push de tag (binário
+  reprodutível, fim do build manual local).
+
+### Security
+
+- **Anti PATH/cwd-hijack**: `reg`, `fsutil`, `wevtutil`, `powershell`, `ipconfig`
+  e `schtasks` agora rodam pelo caminho ABSOLUTO do System32. O `subprocess`
+  procura o exe na pasta do `telador.exe` antes do System32 — um suspeito podia
+  plantar um `reg.exe` falso ao lado do telador e executá-lo com admin durante a
+  perícia. (`win_tools.py`, 12 call-sites)
+- **`--update-sigs` só aceita HTTPS** (libera HTTP só pra loopback): a base
+  baixada vira regra de detecção; sem TLS daria pra injetar assinatura via MITM.
+
+### Fixed / Chore
+
+- Linguagem do `.tsr`: "assinado HMAC" → "selo HMAC de integridade" (detecta
+  adulteração casual, não é prova contra forjador motivado).
+- Limpeza de lint: imports mortos, 4 chaves de dict duplicadas (mesmo valor, sem
+  perda de dado), loop-vars não usadas.
+
 ## [3.30.3] - 2026-06-09
 
 **Fix: PE analysis agora alcança os hits de Amcache (ponto cego de extração de path).**
