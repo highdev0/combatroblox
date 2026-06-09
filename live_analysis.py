@@ -1256,7 +1256,7 @@ def scan_roblox_manual_map() -> dict:
     if not target_pids:
         return _result("Injeção Manual Map (Roblox)", "Detecção de DLLs injetadas por Manual Map", [])
 
-    for pid, name in target_pids:
+    for pid, _ in target_pids:
         handle = None
         try:
             # PROCESS_QUERY_INFORMATION = 0x0400, PROCESS_VM_READ = 0x0010
