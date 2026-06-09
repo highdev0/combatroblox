@@ -395,7 +395,7 @@ class Cluster:
             by_source.setdefault(e.source, []).append(e)
 
         raw = 0.0
-        for src, evs in by_source.items():
+        for evs in by_source.values():
             # ordena por severity desc pra contar as fortes primeiro
             evs_sorted = sorted(
                 evs,

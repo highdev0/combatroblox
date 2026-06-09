@@ -832,7 +832,7 @@ def _render_pe_section(findings: list) -> str:
         return ""
 
     rows = []
-    for source, item in pe_items:
+    for _source, item in pe_items:
         info = item["pe_info"]
         pe = info.get("pe", {})
         sha = info.get("sha256") or ""

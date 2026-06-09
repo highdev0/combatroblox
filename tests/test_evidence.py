@@ -192,7 +192,7 @@ def test_cluster_verdict_confirmed_needs_multiple_sources():
     ou ≥3 fontes E score ≥40. 1 fonte com 5 hits nunca confirma."""
     # 5 hits high da mesma fonte (Prefetch)
     findings = [_finding("Prefetch", [
-        _item(label="hit1", matched=f"solara"),
+        _item(label="hit1", matched="solara"),
         _item(label="hit2", matched="solara.exe"),
         _item(label="hit3", matched="krnl"),
         _item(label="hit4", matched="krnl.exe"),

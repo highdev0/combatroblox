@@ -14,7 +14,6 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import live_analysis as la  # noqa: E402
-import psutil  # noqa: E402
 
 
 class _FakeProc:

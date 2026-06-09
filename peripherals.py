@@ -130,7 +130,7 @@ def _read_ghub_scripts_from_db(db_path: str) -> list[tuple[str, str]]:
         cur = conn.cursor()
         try:
             cur.execute("SELECT _id, _date, file FROM data")
-            for row_id, row_date, blob in cur.fetchall():
+            for row_id, _row_date, blob in cur.fetchall():
                 if not blob:
                     continue
                 # blob é JSON (bytes ou str)

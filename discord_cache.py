@@ -12,7 +12,7 @@ import os
 import re
 from datetime import datetime, timedelta
 
-from database import SUSPICIOUS_DOMAINS, EXECUTOR_KEYWORDS
+from database import SUSPICIOUS_DOMAINS
 
 
 DISCORD_CACHE_PATHS = [

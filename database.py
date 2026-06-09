@@ -225,9 +225,7 @@ EXECUTOR_KEYWORDS = {
     # Ninja Hub
     "ninjahub":         "high",
     "ninja hub":        "high",
-    # Outros menos comuns
-    "scriptware":       "high",  # já tinha mas reforça
-    "calamari executor":"high",  # já tinha
+    # ("scriptware" e "calamari executor" já estão definidos acima — dupes removidas)
     # "valex" (solto) removido — FP: colide com Valex (marca de cabos).
     # "valex.exe" (keyword, pra Prefetch/Amcache) + "valex executor" cobrem.
     "valex.exe":        "high",
@@ -639,11 +637,9 @@ SUSPICIOUS_DOMAINS = {
     "krnl.lat":             "high",
     "hydrogen.gg":          "high",
     "hydrogen.cc":          "high",
-    "deltaexploits.gg":     "high",     # já tinha mas reforço
     "evon.cc":              "high",
     "evonexploit.com":      "high",
     "trigonevo.gg":         "high",
-    "argonexec.com":        "high",     # já tinha
     "swiftexec.gg":         "high",
     "swift-exec.com":       "high",
 

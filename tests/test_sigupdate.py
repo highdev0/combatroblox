@@ -16,7 +16,6 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import sigupdate  # noqa: E402
-import database   # noqa: E402
 
 
 # --------------------------- mini servidor de teste ---------------------------
