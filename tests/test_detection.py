@@ -711,6 +711,39 @@ def test_compute_sha256(tmp_path):
     assert pe_analysis.compute_sha256(str(p)) == hashlib.sha256(b"conteudo de teste").hexdigest()
 
 
+# --------------------------- Extração de path do detail (pe_analysis) ---------------------------
+
+def test_extract_pe_path_amcache_with_sha1():
+    """Amcache reporta 'path SHA1=...' — o path tem que ser extraído mesmo com
+    o hash depois da extensão (o .endswith() antigo cegava nesse caso)."""
+    import pe_analysis
+    d = r"C:\Users\x\Downloads\cheat.exe SHA1=da39a3ee5e6b4b0d3255bfef95601890afd80709"
+    assert pe_analysis._extract_pe_path(d) == r"C:\Users\x\Downloads\cheat.exe"
+
+
+def test_extract_pe_path_plain_and_quoted():
+    import pe_analysis
+    assert pe_analysis._extract_pe_path(r"C:\tmp\solara.exe") == r"C:\tmp\solara.exe"
+    assert pe_analysis._extract_pe_path('"C:\\tmp\\a.dll"') == r"C:\tmp\a.dll"
+
+
+def test_extract_pe_path_with_spaces_and_suffix():
+    import pe_analysis
+    d = r"C:\Program Files\app\win ring0.sys carregado (não-assinado)"
+    assert pe_analysis._extract_pe_path(d) == r"C:\Program Files\app\win ring0.sys"
+
+
+def test_extract_pe_path_multiline_picks_first_path():
+    import pe_analysis
+    d = "Driver BYOVD detectado\nC:\\Windows\\Temp\\winring0.sys reason=create"
+    assert pe_analysis._extract_pe_path(d) == r"C:\Windows\Temp\winring0.sys"
+
+
+def test_extract_pe_path_none_when_no_pe():
+    import pe_analysis
+    assert pe_analysis._extract_pe_path("nenhum arquivo aqui, só texto") is None
+
+
 # --------------------------- Contrato de todos os scanners ---------------------------
 
 SCANNER_MODULES = [

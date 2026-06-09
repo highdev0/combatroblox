@@ -6,9 +6,38 @@ packers usados pra esconder cheat (UPX/Themida/VMProtect/Enigma).
 """
 
 import os
+import re
 import struct
 import hashlib
 from datetime import datetime
+
+
+# Caminho de arquivo PE (drive-letter ou UNC) terminando em exe/dll/ocx/sys,
+# seguido de fim, espaço, aspas ou pipe. Casa o path mesmo quando vem com
+# sufixo depois da extensão — ex.: Amcache reporta "C:\x\cheat.exe SHA1=...".
+_PE_PATH_RE = re.compile(
+    r'(?:[A-Za-z]:\\|\\\\)[^\n"|]*?\.(?:exe|dll|ocx|sys)(?=$|[\s"|])',
+    re.IGNORECASE,
+)
+
+
+def _extract_pe_path(detail: str) -> str | None:
+    """Extrai o caminho de um PE de um campo 'detail'. Casa "C:\\x\\cheat.exe"
+    sozinho e "C:\\x\\cheat.exe SHA1=..." (Amcache anexa o hash depois do path).
+    O .endswith() antigo, que exigia a linha inteira terminar na extensão, cegava
+    nesse 2º caso e deixava o Amcache sem PE analysis."""
+    for raw in detail.split("\n"):
+        token = raw.strip().strip('"').strip()
+        if not token:
+            continue
+        m = _PE_PATH_RE.search(token)
+        if m:
+            return m.group(0)
+        # Fallback: linha que já é só o path (comportamento antigo preservado,
+        # cobre path relativo/sem drive que o regex acima não casa).
+        if token.lower().endswith((".exe", ".dll", ".ocx", ".sys")):
+            return token
+    return None
 
 
 def compute_sha256(path: str, max_size: int = 100_000_000) -> str | None:
@@ -173,20 +202,9 @@ def enrich_findings_with_pe(findings: list, max_items: int = 30) -> list:
             if enriched >= max_items:
                 return findings
             detail = item.get("detail") or ""
-            # Detalhe pode ser "path\file.exe" ou "path\file.exe SHA1=..."
-            # Pega só o que parece path
-            candidates = []
-            for token in detail.split("\n"):
-                token = token.strip().strip('"').strip()
-                if not token:
-                    continue
-                if token.lower().endswith((".exe", ".dll", ".ocx", ".sys")):
-                    candidates.append(token)
-                    break
-            if not candidates:
+            path = _extract_pe_path(detail)
+            if not path:
                 continue
-
-            path = candidates[0]
             if not os.path.isfile(path):
                 continue
 
