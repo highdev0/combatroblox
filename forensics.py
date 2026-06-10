@@ -7,6 +7,7 @@ Scanners forenses pesados:
 Todos precisam de admin pra cobertura total.
 """
 
+from models import _result, _item, _fmt_ts
 import os
 import struct
 import subprocess
@@ -27,32 +28,6 @@ def _match_keyword(text: str):
     # pra não tocar nos call sites.
     import matching
     return matching.match_keyword(text)
-
-
-def _result(name, description, items, error=None):
-    if error:
-        status = "error"
-    else:
-        status = "suspicious" if items else "clean"
-
-    summary = (
-        f"{len(items)} item(s) suspeito(s)" if items
-        else "Nenhum vestígio encontrado"
-    )
-    if error:
-        summary = f"Erro: {error}"
-
-    return {
-        "name": name, "description": description, "status": status,
-        "items": items, "summary": summary, "error": error,
-    }
-
-
-def _item(label, detail, severity, matched, timestamp=""):
-    return {
-        "label": label, "detail": detail, "severity": severity,
-        "matched": matched, "timestamp": timestamp,
-    }
 
 
 def _filetime_to_str(filetime_int):

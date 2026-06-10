@@ -5,6 +5,7 @@ Network forensics:
   - Hosts file modificações (bloqueio de telemetria do Roblox)
 """
 
+from models import _result, _item, _fmt_ts
 import os
 import re
 import subprocess
@@ -35,27 +36,6 @@ ROBLOX_TELEMETRY_DOMAINS = [
 ]
 
 HOSTS_FILE = r"C:\Windows\System32\drivers\etc\hosts"
-
-
-def _result(name, description, items, error=None):
-    if error:
-        status = "error"
-        summary = f"Erro: {error}"
-    elif not items:
-        status = "clean"
-        summary = "Sem indícios"
-    else:
-        status = "suspicious"
-        summary = f"{len(items)} indício(s)"
-    return {
-        "name": name, "description": description, "status": status,
-        "items": items, "summary": summary, "error": error,
-    }
-
-
-def _item(label, detail, severity, matched, timestamp=""):
-    return {"label": label, "detail": detail, "severity": severity,
-            "matched": matched, "timestamp": timestamp}
 
 
 # ============================ Conexões ativas ============================

@@ -10,6 +10,7 @@ Scanners individuais. Cada função retorna um dict no formato:
 }
 """
 
+from models import _result, _item, _fmt_ts
 import os
 import struct
 import shutil
@@ -76,46 +77,6 @@ def _match_keyword(text: str) -> tuple[str | None, str | None]:
     tipo 'argon' casar 'argonauts')."""
     import matching
     return matching.match_keyword(text)
-
-
-def _result(name: str, description: str, items: list, status: str = None, error: str = None) -> dict:
-    if error:
-        status = "error"
-    elif status is None:
-        status = "suspicious" if items else "clean"
-
-    summary = (
-        f"{len(items)} item(s) suspeito(s)" if items
-        else "Nenhum vestígio encontrado"
-    )
-    if error:
-        summary = f"Erro: {error}"
-
-    return {
-        "name": name,
-        "description": description,
-        "status": status,
-        "items": items,
-        "summary": summary,
-        "error": error,
-    }
-
-
-def _item(label: str, detail: str, severity: str, matched: str, timestamp: str = "") -> dict:
-    return {
-        "label": label,
-        "detail": detail,
-        "severity": severity,
-        "matched": matched,
-        "timestamp": timestamp,
-    }
-
-
-def _fmt_ts(ts: float) -> str:
-    try:
-        return datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S")
-    except (ValueError, OSError, OverflowError):
-        return ""
 
 
 # ----------------------------- System info -----------------------------
@@ -337,25 +298,24 @@ def scan_downloads() -> dict:
         return _result("Downloads", "Pasta Downloads", [], error="Pasta não existe")
 
     try:
-        for root, _dirs, files in os.walk(downloads):
-            for f in files:
-                keyword, severity = _match_keyword(f)
-                if not keyword:
-                    continue
-                full = os.path.join(root, f)
-                try:
-                    mtime = os.path.getmtime(full)
-                    ts = _fmt_ts(mtime)
-                except OSError:
-                    ts = ""
-
-                items.append(_item(
-                    label=f,
-                    detail=full,
-                    severity=severity,
-                    matched=keyword,
-                    timestamp=ts,
-                ))
+        dirs_to_visit = [downloads]
+        while dirs_to_visit:
+            cur = dirs_to_visit.pop()
+            try:
+                with os.scandir(cur) as it:
+                    for entry in it:
+                        if entry.is_dir(follow_symlinks=False): dirs_to_visit.append(entry.path)
+                        elif entry.is_file(follow_symlinks=False):
+                            f = entry.name
+                            keyword, severity = _match_keyword(f)
+                            if not keyword: continue
+                            full = entry.path
+                            try:
+                                mtime = entry.stat().st_mtime
+                                ts = _fmt_ts(mtime)
+                            except OSError: ts = ""
+                            items.append(_item(label=f, detail=full, severity=severity, matched=keyword, timestamp=ts))
+            except OSError: pass
     except Exception as e:
         return _result("Downloads", "Pasta Downloads", [], error=str(e))
 
@@ -825,13 +785,20 @@ def scan_scripts() -> dict:
     matched_files = set()
 
     def walk_capped(root_path: str, max_depth: int):
-        root_depth = root_path.rstrip(os.sep).count(os.sep)
-        for dirpath, dirnames, filenames in os.walk(root_path):
-            depth = dirpath.count(os.sep) - root_depth
-            if depth >= max_depth:
-                dirnames[:] = []
-                continue
-            yield dirpath, filenames
+        dirs = [(root_path, 0)]
+        while dirs:
+            cur, depth = dirs.pop()
+            if depth >= max_depth: continue
+            try:
+                with os.scandir(cur) as it:
+                    fnames = []
+                    subdirs = []
+                    for entry in it:
+                        if entry.is_dir(follow_symlinks=False): subdirs.append((entry.path, depth + 1))
+                        elif entry.is_file(follow_symlinks=False): fnames.append(entry)
+                yield cur, fnames
+                dirs.extend(reversed(subdirs))
+            except OSError: continue
 
     # Padrão: só formatos que são efetivamente script.
     # Modo estrito: inclui .txt (mais cobertura, porém mais falso positivo).
@@ -846,13 +813,14 @@ def scan_scripts() -> dict:
 
         try:
             for dirpath, filenames in walk_capped(base, SCRIPT_SEARCH_MAX_DEPTH):
-                for f in filenames:
+                for entry in filenames:
+                    f = entry.name
                     if not f.lower().endswith(script_extensions):
                         continue
-                    full = os.path.join(dirpath, f)
+                    full = entry.path
 
                     try:
-                        size = os.path.getsize(full)
+                        size = entry.stat().st_size
                     except OSError:
                         continue
 
@@ -885,7 +853,7 @@ def scan_scripts() -> dict:
                     matched_files.add(full)
 
                     try:
-                        mtime = os.path.getmtime(full)
+                        mtime = entry.stat().st_mtime
                         ts = _fmt_ts(mtime)
                     except OSError:
                         ts = ""

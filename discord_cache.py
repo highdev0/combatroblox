@@ -8,6 +8,7 @@ Cheaters mandam link de download por DM — o Chrome embedded do
 Discord cacheia tudo, ficando rastro mesmo se mensagem foi apagada.
 """
 
+from models import _result, _item, _fmt_ts
 import os
 import re
 from datetime import datetime, timedelta
@@ -27,27 +28,6 @@ DISCORD_CACHE_PATHS = [
 
 # Regex pra URLs (rápido, captura essencial)
 URL_RE = re.compile(rb"https?://[A-Za-z0-9._\-/?=&%#~+]{8,200}")
-
-
-def _result(name, description, items, error=None):
-    if error:
-        status = "error"
-        summary = f"Erro: {error}"
-    elif not items:
-        status = "clean"
-        summary = "Sem links suspeitos no cache"
-    else:
-        status = "suspicious"
-        summary = f"{len(items)} link(s) suspeito(s) no cache"
-    return {
-        "name": name, "description": description, "status": status,
-        "items": items, "summary": summary, "error": error,
-    }
-
-
-def _item(label, detail, severity, matched, timestamp=""):
-    return {"label": label, "detail": detail, "severity": severity,
-            "matched": matched, "timestamp": timestamp}
 
 
 def scan_discord_cache() -> dict:

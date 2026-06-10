@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.36.0] - 2026-06-10
+
+**Clean Up & Refactoring Fixes**: Complete refactoring phase to eliminate redundant code and fix architectural bugs.
+
+### Fixed
+
+- **mmap TOCTOU bug** (`extra_forensics.py`): Adicionado tratamento explícito para `ValueError` durante inicialização do mmap para arquivos de 0 bytes, prevenindo crash TOCTOU durante a leitura concorrente do arquivo SRUM.
+- **Redundant stats syscalls leak** (`scanners.py`, `removable_media.py`): Os generators iteradores de diretório (`walk_capped`, `_walk_drive`) agora emitem instâncias completas de `os.DirEntry` em vez de apenas o nome em string, permitindo que os consumidores reaproveitem a struct `stat()` pré-cacheadas sem syscalls adicionais de disco.
+- **Limpeza arquitetural**: Stripagem bem-sucedida de milhares de linhas redundantes (`_result`, `_item`, `_fmt_ts`) duplicadas em 15 arquivos individuais de scanners. O `models.py` tornou-se a fonte unificada dessas funções, implementado globalmente para todos os componentes.
+
 ## [3.35.0] - 2026-06-10
 
 **Anti-cheat**: detecção de debugger ativo e injeção Manual Map no Roblox.

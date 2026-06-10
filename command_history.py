@@ -7,6 +7,7 @@ Histórico de comandos:
 90% dos cheats instalados via 'iex (irm krnl.cat/...)' ficam aqui.
 """
 
+from models import _result, _item, _fmt_ts
 import os
 from datetime import datetime
 
@@ -27,32 +28,6 @@ except ImportError:
     HAS_WINREG = False
 
 
-def _result(name, description, items, error=None):
-    if error:
-        status = "error"
-        summary = f"Erro: {error}"
-    elif not items:
-        status = "clean"
-        summary = "Nenhum comando suspeito"
-    else:
-        status = "suspicious"
-        summary = f"{len(items)} comando(s) suspeito(s)"
-    return {
-        "name": name, "description": description, "status": status,
-        "items": items, "summary": summary, "error": error,
-    }
-
-
-def _item(label, detail, severity, matched, timestamp=""):
-    return {
-        "label": label, "detail": detail, "severity": severity,
-        "matched": matched, "timestamp": timestamp,
-    }
-
-
-# Verbos do PowerShell/cmd que indicam BUSCA por padrão, não execução.
-# Quem digita `-match 'winring0|kdmapper|gmer'` está PROCURANDO esses tokens,
-# não rodando eles — frequente em script de auditoria/diagnóstico.
 _PS_SEARCH_VERBS = (
     "-match", "-cmatch", "-imatch", "-notmatch", "-notcmatch",
     "select-string", " sls ", "| sls", "findstr", "where-object",

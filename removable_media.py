@@ -13,6 +13,7 @@ FAT32 de pendrive não tem USN journal — desplugar não deixa rastro NA USB, m
 o registro do host e os artefatos de execução do C: ainda contam a história.
 """
 
+from models import _result, _item, _fmt_ts
 import os
 import ctypes
 import winreg
@@ -22,29 +23,6 @@ import matching
 
 
 # ----------------------------- helpers -----------------------------
-
-def _result(name, description, items, error=None):
-    if error:
-        status, summary = "error", f"Erro: {error}"
-    elif items:
-        status, summary = "suspicious", f"{len(items)} item(s) suspeito(s)"
-    else:
-        status, summary = "clean", "Nenhum vestígio encontrado"
-    return {"name": name, "description": description, "status": status,
-            "items": items, "summary": summary, "error": error}
-
-
-def _item(label, detail, severity, matched, timestamp=""):
-    return {"label": label, "detail": detail, "severity": severity,
-            "matched": matched, "timestamp": timestamp}
-
-
-def _fmt_ts(ts):
-    try:
-        return datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S")
-    except (ValueError, OSError, OverflowError):
-        return ""
-
 
 def _filetime_to_dt(ft100ns):
     """100ns desde 1601 (formato do winreg.QueryInfoKey) -> datetime, ou None."""
@@ -187,7 +165,18 @@ def _walk_drive(drive):
     scanner exige escrever um arquivo com nome de executor real (ex.: solara.exe)
     no disco — que cai no USN journal/Prefetch do host e vira falso positivo no
     próprio Telador quando ele roda depois."""
-    return os.walk(drive)
+    dirs = [drive]
+    while dirs:
+        cur = dirs.pop()
+        try:
+            with os.scandir(cur) as it:
+                dnames, fnames = [], []
+                for entry in it:
+                    if entry.is_dir(follow_symlinks=False): dnames.append(entry.name)
+                    elif entry.is_file(follow_symlinks=False): fnames.append(entry)
+            yield cur, dnames, fnames
+            for d in reversed(dnames): dirs.append(os.path.join(cur, d))
+        except OSError: pass
 
 
 def scan_removable_drives() -> dict:
@@ -205,7 +194,8 @@ def scan_removable_drives() -> dict:
                 if dirpath[len(drive):].count(os.sep) > _MAX_DEPTH:
                     dirnames[:] = []
                     continue
-                for f in filenames:
+                for entry in filenames:
+                    f = entry.name
                     if not f.lower().endswith(_REMOVABLE_EXTS):
                         continue
                     kw, _sev = matching.match_keyword(f)
@@ -213,12 +203,12 @@ def scan_removable_drives() -> dict:
                         kw, _sev = matching.match_keyword(dirpath)
                     if not kw:
                         continue
-                    full = os.path.join(dirpath, f)
+                    full = entry.path
                     if full.lower() in seen:
                         continue
                     seen.add(full.lower())
                     try:
-                        mtime = _fmt_ts(os.path.getmtime(full))
+                        mtime = _fmt_ts(entry.stat().st_mtime)
                     except OSError:
                         mtime = ""
                     items.append(_item(

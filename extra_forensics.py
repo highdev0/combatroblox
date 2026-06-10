@@ -16,6 +16,7 @@ e por isso não limpam. Cada scanner é independente.
     vazios juntos" (assinatura de cleaner usado pré-SS).
 """
 
+from models import _result, _item, _fmt_ts
 import os
 import re
 import time
@@ -34,29 +35,6 @@ except ImportError:
 
 
 # ============================ helpers ============================
-
-def _result(name, description, items, error=None):
-    if error:
-        status = "error"
-        summary = f"Erro: {error}"
-    elif not items:
-        status = "clean"
-        summary = "Nada encontrado"
-    else:
-        status = "suspicious"
-        summary = f"{len(items)} item(s) suspeito(s)"
-    return {
-        "name": name, "description": description, "status": status,
-        "items": items, "summary": summary, "error": error,
-    }
-
-
-def _item(label, detail, severity, matched, timestamp=""):
-    return {
-        "label": label, "detail": detail, "severity": severity,
-        "matched": matched, "timestamp": timestamp,
-    }
-
 
 def _match(text):
     """Usa o matching central (word-boundary)."""
@@ -183,21 +161,18 @@ def scan_srum() -> dict:
                        error="SRUDB.dat não encontrado")
 
     try:
-        # Cap em 30MB pra limitar memória/tempo do regex (SRUM típico é 5-30MB).
-        # Na prática o arquivo costuma estar locado pelo serviço DPS -> skip.
+        import mmap
+        size = os.path.getsize(SRUM_PATH)
+        if size == 0:
+            return _result("SRUM", "System Resource Usage Monitor", [], error="Arquivo vazio")
         with open(SRUM_PATH, "rb") as fh:
-            blob = fh.read(30_000_000)
-    except (PermissionError, OSError) as e:
-        return _result("SRUM", "System Resource Usage Monitor", [],
-                       error=f"Sem acesso (arquivo locado pelo serviço): {e}")
-
-    # Strings UTF-16 LE dentro do ESE têm length-prefix; ignoramos isso e só
-    # decodificamos o blob inteiro. Sobra ruído, mas o matching filtra.
-    try:
-        text = blob.decode("utf-16-le", errors="replace")
-    except UnicodeDecodeError:
-        return _result("SRUM", "System Resource Usage Monitor", [],
-                       error="Decode falhou")
+            with mmap.mmap(fh.fileno(), min(size, 30_000_000), access=mmap.ACCESS_READ) as blob:
+                try:
+                    text = bytes(blob).decode("utf-16-le", errors="replace")
+                except UnicodeDecodeError:
+                    return _result("SRUM", "System Resource Usage Monitor", [], error="Decode falhou")
+    except (PermissionError, OSError, ValueError) as e:
+        return _result("SRUM", "System Resource Usage Monitor", [], error=f"Sem acesso (arquivo locado pelo serviço): {e}")
 
     # Procura por padrões de path (\Windows-style)
     paths = re.findall(r"\\[A-Za-z]:\\[^\x00\x01\x02\x03\x04\x05\x06\x07\x08\x0b\x0c\x0e-\x1f\"<>|]{4,200}", text)
@@ -285,9 +260,13 @@ def scan_script_hashes() -> dict:
                     continue
 
                 try:
+                    import mmap
+                    size = os.path.getsize(full)
+                    if size == 0: continue
                     with open(full, "rb") as fh:
-                        h = hashlib.sha1(fh.read()).hexdigest()
-                except (OSError, PermissionError):
+                        with mmap.mmap(fh.fileno(), 0, access=mmap.ACCESS_READ) as blob:
+                            h = hashlib.sha1(blob).hexdigest()
+                except (OSError, PermissionError, ValueError):
                     continue
                 checked += 1
 

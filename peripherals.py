@@ -8,6 +8,7 @@ Razer Synapse, Bloody, X-Mouse e outros têm sistemas similares.
 Quase ninguém checa isso, mas é onde MUITOS escondem o cheat real.
 """
 
+from models import _result, _item, _fmt_ts
 import os
 import sqlite3
 import tempfile
@@ -15,36 +16,6 @@ import shutil
 from datetime import datetime
 
 from database import MOUSE_SOFTWARE, MACRO_RED_FLAGS
-
-
-def _result(name, description, items, error=None):
-    if error:
-        status = "error"
-        summary = f"Erro: {error}"
-    elif not items:
-        status = "clean"
-        summary = "Sem software de macro detectado"
-    else:
-        status = "suspicious"
-        summary = f"{len(items)} indício(s)"
-    return {
-        "name": name, "description": description, "status": status,
-        "items": items, "summary": summary, "error": error,
-    }
-
-
-def _item(label, detail, severity, matched, timestamp=""):
-    return {
-        "label": label, "detail": detail, "severity": severity,
-        "matched": matched, "timestamp": timestamp,
-    }
-
-
-def _fmt_ts(ts):
-    try:
-        return datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S")
-    except (ValueError, OSError, OverflowError):
-        return ""
 
 
 def _scan_macro_content(content: str) -> list[tuple[str, str]]:

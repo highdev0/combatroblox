@@ -118,18 +118,23 @@ WHITELIST_PATH_SUBSTRINGS = [
 
 
 def is_whitelisted_path(path: str) -> tuple[bool, str | None]:
-    """Retorna (True, motivo) se path está em whitelist."""
-    if not path:
+    import os
+    """
+    Retorna (True, motivo) se o 'path' for de uma ferramenta legítima
+    como Visual Studio, JetBrains, Roblox nativo, etc.
+    Do contrário, (False, None).
+    """
+    if not path or len(path) < 3:
         return False, None
-    lower = path.lower().replace("/", "\\")
-    while "\\\\" in lower:
-        lower = lower.replace("\\\\", "\\")
+
+    # Normaliza
+    norm_path = os.path.normpath(path).lower()
+    parts = norm_path.split(os.sep)
+
     for sub in WHITELIST_PATH_SUBSTRINGS:
-        sub_normalized = sub.replace("/", "\\").lower()
-        while "\\\\" in sub_normalized:
-            sub_normalized = sub_normalized.replace("\\\\", "\\")
-        if sub_normalized in lower:
-            return True, f"path-whitelisted ({sub_normalized.strip(chr(92))})"
+        norm_sub = os.path.normpath(sub).lower().strip(os.sep)
+        if norm_path == norm_sub or norm_path.startswith(norm_sub + os.sep) or norm_sub in parts:
+            return True, f"whitelisted path substring: {sub}"
     return False, None
 
 

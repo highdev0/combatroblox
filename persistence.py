@@ -10,6 +10,7 @@ Cobre:
   - WER (Windows Error Reporting) crash dumps
 """
 
+from models import _result, _item, _fmt_ts
 import os
 import subprocess
 
@@ -34,37 +35,6 @@ def _match_keyword(text: str):
     # Delega pro matching central (word-boundary, anti-FP).
     import matching
     return matching.match_keyword(text)
-
-
-def _result(name, description, items, error=None):
-    if error:
-        status = "error"
-        summary = f"Erro: {error}"
-    elif not items:
-        status = "clean"
-        summary = "Nada suspeito"
-    else:
-        status = "suspicious"
-        summary = f"{len(items)} entrada(s) suspeita(s)"
-
-    return {
-        "name": name, "description": description, "status": status,
-        "items": items, "summary": summary, "error": error,
-    }
-
-
-def _item(label, detail, severity, matched, timestamp=""):
-    return {
-        "label": label, "detail": detail, "severity": severity,
-        "matched": matched, "timestamp": timestamp,
-    }
-
-
-def _fmt_ts(ts):
-    try:
-        return datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S")
-    except (ValueError, OSError, OverflowError):
-        return ""
 
 
 # ============================ Startup folders ============================

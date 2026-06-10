@@ -5,6 +5,7 @@ Anti-evasão: detecta tentativas de mascarar a SS.
   - Clock tampering (relógio do sistema mexido)
 """
 
+from models import _result, _item, _fmt_ts
 import os
 import time
 from datetime import datetime, timedelta
@@ -28,32 +29,6 @@ try:
     HAS_WINREG = True
 except ImportError:
     HAS_WINREG = False
-
-
-def _result(name, description, items, error=None):
-    if error:
-        status = "error"
-    else:
-        status = "suspicious" if items else "clean"
-
-    if error:
-        summary = f"Erro: {error}"
-    elif not items:
-        summary = "Sem indícios"
-    else:
-        summary = f"{len(items)} indício(s) encontrado(s)"
-
-    return {
-        "name": name, "description": description, "status": status,
-        "items": items, "summary": summary, "error": error,
-    }
-
-
-def _item(label, detail, severity, matched, timestamp=""):
-    return {
-        "label": label, "detail": detail, "severity": severity,
-        "matched": matched, "timestamp": timestamp,
-    }
 
 
 # ============================ VM detection ============================

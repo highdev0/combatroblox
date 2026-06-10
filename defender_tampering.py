@@ -11,6 +11,7 @@ chaves do Defender no registro são bloqueadas pelo Tamper Protection mesmo com
 admin (só SYSTEM lê), então a API é o caminho que de fato funciona em produção.
 """
 
+from models import _result, _item, _fmt_ts
 import os
 import subprocess
 
@@ -72,23 +73,6 @@ def _probe_dev_folder(original_path: str) -> bool:
     return False
 
 
-def _result(name, description, items, error=None):
-    if error:
-        status, summary = "error", f"Erro: {error}"
-    elif items:
-        status, summary = "suspicious", f"{len(items)} item(s) suspeito(s)"
-    else:
-        status, summary = "clean", "Nenhum vestígio encontrado"
-    return {"name": name, "description": description, "status": status,
-            "items": items, "summary": summary, "error": error}
-
-
-def _item(label, detail, severity, matched, timestamp=""):
-    return {"label": label, "detail": detail, "severity": severity,
-            "matched": matched, "timestamp": timestamp}
-
-
-# Pastas graváveis pelo usuário — exclusão aqui = escondendo algo.
 _USER_WRITABLE = ("\\downloads", "\\temp", "\\appdata", "\\users\\public",
                   "\\desktop", "\\roaming", "\\local\\")
 

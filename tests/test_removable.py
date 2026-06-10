@@ -50,8 +50,18 @@ def test_usb_history_item_none_skipped():
 # Os arquivos do drive são injetados via _walk_drive em vez de escritos no disco
 # de verdade: um arquivo com nome de executor real (solara.exe) criado num tmp
 # do host cai no USN journal e vira falso positivo no próprio Telador depois.
+class MockEntry:
+    def __init__(self, name, path):
+        self.name = name
+        self.path = path
+    def stat(self):
+        class Stat:
+            st_mtime = 0
+            st_size = 0
+        return Stat()
+
 def _fake_drive(files):
-    return lambda drive: iter([(drive, [], list(files))])
+    return lambda drive: iter([(drive, [], [MockEntry(f, os.path.join(drive, f)) for f in files])])
 
 
 def test_removable_drives_flags_executor(monkeypatch):

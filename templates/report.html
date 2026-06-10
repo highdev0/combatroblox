@@ -1,0 +1,2015 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Relatório do Telador — {{ sys_info.get('host', '') }}</title>
+    <style>{{ css }}
+    .screenshots .shots { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 12px; }
+    .screenshots .shot { flex: 1 1 480px; max-width: 100%; }
+    .screenshots .shot-label { color: #aaa; font-size: 12px; margin-bottom: 4px; }
+    .screenshots img {
+        max-width: 100%; height: auto; border: 1px solid #2a2a2e;
+        border-radius: 6px; cursor: zoom-in; transition: transform .15s;
+    }
+    .screenshots img:hover { transform: scale(1.02); }
+
+    .high-confidence {
+        border: 2px solid #ff4d4f; box-shadow: 0 0 24px rgba(255, 77, 79, 0.2);
+    }
+    .high-confidence h2 { color: #ff4d4f; }
+    .hc-count { color: #ffb020; font-weight: 700; white-space: nowrap; }
+    .hc-sources { color: #aaa; font-size: 12px; }
+
+    .controls { position: sticky; top: 0; z-index: 50; }
+    .controls-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .controls input {
+        flex: 1; min-width: 260px;
+        background: #0e0e10; border: 1px solid #2a2a2e; color: #e8e8e8;
+        padding: 10px 14px; border-radius: 6px; font-size: 14px;
+        font-family: inherit;
+    }
+    .controls input:focus { outline: none; border-color: #ff4d4f; }
+    .filters { display: flex; gap: 6px; }
+    .filter-btn {
+        background: var(--c, #444); color: #000; border: none;
+        padding: 8px 14px; border-radius: 6px; font-weight: 700;
+        cursor: pointer; font-size: 12px; transition: opacity .15s;
+    }
+    .filter-btn:hover { opacity: 0.85; }
+    .filter-btn.off { opacity: 0.3; }
+    .filter-btn.solid { background: #2a2a2e; color: #e8e8e8; }
+
+    .fp-badge {
+        display: inline-block; margin-left: 6px;
+        background: #ffb020; color: #000;
+        padding: 1px 6px; border-radius: 3px;
+        font-size: 9px; font-weight: 700;
+        cursor: help;
+    }
+    .conf-bar {
+        position: relative; width: 60px; height: 14px;
+        background: #0a0a0c; border-radius: 3px; overflow: hidden;
+    }
+    .conf-fill {
+        height: 100%; transition: width .3s;
+    }
+    .conf-val {
+        position: absolute; top: 0; left: 0; width: 100%;
+        text-align: center; font-size: 10px; line-height: 14px;
+        color: #fff; font-weight: 700;
+        text-shadow: 0 0 2px #000;
+    }
+    .verdict-sub {
+        text-align: center; color: #888; margin: -8px 0 16px;
+        font-size: 13px;
+    }
+    .fp-stats { border-left: 4px solid #3fbf7f; }
+    .dev-evidence {
+        background: #0a0a0c; padding: 10px; border-radius: 6px;
+        margin-top: 8px; font-size: 12px;
+    }
+    .timeline .tl-range {
+        display: flex; justify-content: space-between;
+        color: #aaa; font-size: 12px; margin: 8px 0 4px;
+    }
+    .timeline .tl-track {
+        position: relative; height: 48px;
+        background: linear-gradient(90deg, #1a1a1d, #2a2a2e, #1a1a1d);
+        border-radius: 24px; margin: 6px 0 12px;
+        border: 1px solid #2a2a2e;
+    }
+    .timeline .tl-dot {
+        position: absolute; top: 50%; transform: translate(-50%, -50%);
+        width: 12px; height: 12px; border-radius: 50%;
+        cursor: help; box-shadow: 0 0 8px currentColor;
+        transition: transform .15s, box-shadow .15s;
+    }
+    .timeline .tl-dot:hover {
+        transform: translate(-50%, -50%) scale(2);
+        z-index: 10;
+        box-shadow: 0 0 16px currentColor;
+    }
+    .pe-analysis { border-left: 4px solid #ffb020; }
+    .pe-flag {
+        display: inline-block; padding: 2px 8px; border-radius: 3px;
+        font-size: 10px; font-weight: 700; margin-right: 4px;
+    }
+    .pe-flag-high { background: #ff4d4f; color: #000; }
+    .exe-hash {
+        text-align: center; color: #666; font-size: 11px;
+        margin-top: 24px; padding: 12px; background: #0a0a0c;
+        border-radius: 6px;
+    }
+    .exe-hash code { color: #888; word-break: break-all; }
+
+    /* === Layout com sidebar === */
+    body { display: flex; padding: 0; min-height: 100vh; }
+    .sidebar {
+        position: sticky; top: 0; height: 100vh;
+        width: 260px; flex-shrink: 0;
+        background: #08080a; border-right: 1px solid #1f1f23;
+        padding: 20px 0; overflow-y: auto;
+    }
+    .sidebar-head {
+        padding: 0 20px 20px; border-bottom: 1px solid #1f1f23;
+    }
+    .sidebar-head h3 {
+        margin: 0 0 12px; font-size: 18px; letter-spacing: 2px;
+        background: linear-gradient(90deg, #ff4d4f, #ffb020);
+        -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .nav-score {
+        display: inline-block; padding: 6px 12px;
+        color: #000; font-weight: 800; font-size: 12px;
+        border-radius: 4px; letter-spacing: 1px;
+    }
+    .sidebar-nav { padding: 12px 0; }
+    .nav-group { margin-bottom: 20px; }
+    .nav-group-title {
+        padding: 8px 20px; color: #555; font-size: 10px;
+        text-transform: uppercase; letter-spacing: 2px; font-weight: 700;
+    }
+    .nav-link {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 8px 20px; color: #aaa; text-decoration: none;
+        font-size: 13px; transition: background .1s, color .1s;
+        border-left: 3px solid transparent;
+    }
+    .nav-link:hover { background: #131316; color: #fff; border-left-color: #ff4d4f; }
+    .nav-link.nav-hit { color: #e8e8e8; font-weight: 600; }
+    .nav-link.nav-clean { color: #555; }
+    .nav-badge {
+        background: #ff4d4f; color: #000; padding: 2px 8px;
+        border-radius: 10px; font-size: 11px; font-weight: 700;
+    }
+    .main-content {
+        flex: 1; padding: 24px; max-width: calc(100% - 260px);
+        scroll-padding-top: 20px;
+    }
+    .page-header {
+        margin-bottom: 24px; padding-bottom: 16px;
+        border-bottom: 1px solid #1f1f23;
+    }
+    .page-header h1 {
+        margin: 0; font-size: 32px; font-weight: 800; letter-spacing: 3px;
+        background: linear-gradient(90deg, #ff4d4f 0%, #ffb020 50%, #ff4d4f 100%);
+        -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .page-header .sub { color: #666; margin-top: 4px; font-size: 13px; }
+    .page-footer {
+        margin-top: 32px; padding: 20px; border-top: 1px solid #1f1f23;
+        color: #555; font-size: 12px; text-align: center;
+    }
+    .report-attrib {
+        margin-top: 18px; padding-top: 14px; border-top: 1px solid #1f1f23;
+        text-align: center; font-size: 12px; color: #777;
+    }
+    .report-attrib .brand {
+        color: #e8b339; font-weight: 700; letter-spacing: 0.5px;
+        font-family: 'Consolas', monospace;
+    }
+    .report-attrib a { color: #888; text-decoration: none; }
+    .report-attrib a:hover { color: #e8b339; }
+
+    /* === Collapsible sections === */
+    details > summary {
+        cursor: pointer; list-style: none; user-select: none;
+    }
+    details > summary::-webkit-details-marker { display: none; }
+    details > summary::before {
+        content: "▶"; display: inline-block; margin-right: 10px;
+        color: #555; font-size: 10px;
+        transition: transform .15s;
+    }
+    details[open] > summary::before { transform: rotate(90deg); }
+    details > summary:hover h2 { color: #ff4d4f; }
+
+    /* === Charts === */
+    .charts-grid {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+    }
+    @media (max-width: 900px) {
+        .charts-grid { grid-template-columns: 1fr; }
+    }
+    .chart-card {
+        background: #0e0e10; border: 1px solid #2a2a2e;
+        border-radius: 8px; padding: 16px;
+    }
+    .chart-card h3 {
+        margin: 0 0 12px; font-size: 13px; color: #aaa;
+        text-transform: uppercase; letter-spacing: 1px;
+    }
+    .donut { width: 100%; max-width: 220px; height: auto; display: block; margin: 0 auto; }
+    .donut-legend {
+        display: flex; justify-content: center; gap: 16px;
+        font-size: 12px; color: #aaa; margin-top: 12px; flex-wrap: wrap;
+    }
+    .donut-legend .dot {
+        display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+        margin-right: 6px; vertical-align: middle;
+    }
+    .bars { display: flex; flex-direction: column; gap: 8px; }
+    .bar-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+    .bar-label {
+        flex: 0 0 35%; color: #ccc; text-align: right; overflow: hidden;
+        text-overflow: ellipsis; white-space: nowrap;
+    }
+    .bar-track {
+        flex: 1; height: 16px; background: #0a0a0c; border-radius: 3px;
+        overflow: hidden;
+    }
+    .bar-fill {
+        height: 100%; background: linear-gradient(90deg, #ff4d4f, #ffb020);
+        transition: width .5s;
+    }
+    .bar-count {
+        flex: 0 0 30px; text-align: left; color: #ffb020; font-weight: 700;
+    }
+
+    /* === Empty state === */
+    .empty-state {
+        text-align: center; padding: 40px 20px;
+        border: 2px dashed #3fbf7f44;
+    }
+    .empty-icon { font-size: 64px; margin-bottom: 16px; }
+    .empty-state h2 {
+        color: #3fbf7f; margin: 0 0 12px;
+        font-size: 28px; letter-spacing: 1px;
+    }
+    .empty-state p { color: #aaa; max-width: 540px; margin: 0 auto 8px; }
+    .empty-state .empty-sub { color: #666; font-size: 12px; margin-top: 16px; }
+
+    /* === Print === */
+    @media print {
+        body { background: white; color: black; display: block; }
+        .sidebar, .controls { display: none !important; }
+        .main-content { max-width: 100%; padding: 0; }
+        .card { break-inside: avoid; border-color: #ccc; background: white; }
+        .card h2 { color: black; }
+        code { color: #c5780b; background: #f5f5f5; }
+        details { open: true; }
+        details > summary::before { display: none; }
+    }
+
+    /* === Mobile === */
+    @media (max-width: 700px) {
+        body { flex-direction: column; }
+        .sidebar { position: relative; width: 100%; height: auto; }
+        .main-content { max-width: 100%; }
+    }
+
+    /* === Custom scrollbar === */
+    * { scrollbar-width: thin; scrollbar-color: #ff4d4f #0a0a0c; }
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: #0a0a0c; }
+    ::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, #ff4d4f, #ffb020);
+        border-radius: 10px; border: 2px solid #0a0a0c;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(180deg, #ff6668, #ffc040);
+    }
+    ::-webkit-scrollbar-corner { background: #0a0a0c; }
+    .sidebar::-webkit-scrollbar { width: 6px; }
+    .sidebar::-webkit-scrollbar-thumb { background: #ff4d4f55; border: none; }
+
+    /* === Espaçamento refinado === */
+    body {
+        font-size: 14px; line-height: 1.5;
+    }
+    .main-content {
+        padding: 32px 40px 24px;
+        max-width: calc(100% - 260px);
+    }
+    .card {
+        padding: 24px 28px; margin-bottom: 16px;
+        border-radius: 10px;
+    }
+    .card h2 { font-size: 17px; margin: 0; line-height: 1.4; }
+    .card .desc {
+        margin: 8px 0 12px; font-size: 13px; line-height: 1.55;
+    }
+    .card .summary { margin: 8px 0 16px; font-size: 13px; }
+    .card-head { padding: 4px 0; gap: 16px; }
+    details > summary { padding: 4px 0; }
+    details[open] > summary { margin-bottom: 4px; }
+    table { margin-top: 4px; }
+    th, td { padding: 10px 12px; }
+    .stats { gap: 12px; margin: 8px 0 4px; }
+    .stat { padding: 16px 24px; min-width: 96px; }
+    .stat .num { font-size: 26px; line-height: 1.2; margin-bottom: 4px; }
+    .stat > div:last-child { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+    .page-header { margin-bottom: 20px; padding-bottom: 16px; }
+    .page-header h1 { font-size: 28px; letter-spacing: 4px; }
+
+    /* Sidebar refinements */
+    .sidebar { padding: 24px 0 32px; }
+    .sidebar-head { padding: 0 24px 20px; }
+    .sidebar-head h3 { font-size: 17px; letter-spacing: 3px; margin: 0 0 14px; }
+    .sidebar-nav { padding: 16px 0 8px; }
+    .nav-group { margin-bottom: 24px; }
+    .nav-group-title {
+        padding: 10px 24px; font-size: 10px; letter-spacing: 2px;
+    }
+    .nav-link {
+        padding: 9px 24px; font-size: 13px; line-height: 1.4;
+        margin: 1px 0;
+    }
+    .nav-badge { padding: 2px 9px; font-size: 10px; margin-left: 8px; }
+
+    /* Charts spacing */
+    .charts-grid { gap: 16px; margin-top: 8px; }
+    .chart-card { padding: 20px; }
+    .chart-card h3 { margin: 0 0 16px; font-size: 12px; letter-spacing: 1.5px; }
+    .donut-legend { margin-top: 16px; gap: 20px; }
+    .bars { gap: 10px; }
+    .bar-row { font-size: 12px; }
+    .bar-label { padding-right: 4px; }
+    .bar-track { height: 14px; border-radius: 4px; }
+
+    /* Timeline refinement */
+    .timeline .tl-range { margin: 12px 0 6px; padding: 0 4px; }
+    .timeline .tl-track { margin: 8px 0 16px; height: 44px; }
+
+    /* Sections code refinement */
+    code { padding: 2px 7px; font-size: 12px; }
+    .empty { padding: 12px 0; font-size: 13px; }
+
+    /* FP-stats and high-confidence padding */
+    .fp-stats, .high-confidence { padding: 24px 28px; }
+    .verdict-sub { margin: -4px 0 18px; }
+    .overview .big-verdict { font-size: 32px; margin: 18px 0 10px; }
+
+    /* ================================================================
+       === 10/10 PASS: design tokens, typography, animations, lightbox
+       ================================================================ */
+
+    :root {
+        /* Spacing scale (4-8-12-16-24-32-48-64) */
+        --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px;
+        --s-6: 24px; --s-8: 32px; --s-12: 48px; --s-16: 64px;
+
+        /* Color tokens */
+        --c-red: #ff4d4f;
+        --c-red-soft: rgba(255, 77, 79, 0.08);
+        --c-orange: #ffb020;
+        --c-orange-soft: rgba(255, 176, 32, 0.07);
+        --c-yellow: #ffe066;
+        --c-green: #3fbf7f;
+        --c-green-soft: rgba(63, 191, 127, 0.08);
+
+        /* Neutral scale */
+        --c-bg-0: #08080a;
+        --c-bg-1: #0e0e10;
+        --c-bg-2: #16161a;
+        --c-bg-3: #1a1a1d;
+        --c-bg-4: #232327;
+        --c-border: #1f1f23;
+        --c-border-soft: #15151a;
+
+        /* Text scale */
+        --c-text: #f0f0f2;
+        --c-text-mute: #aaa;
+        --c-text-soft: #777;
+        --c-text-faint: #555;
+
+        /* Motion */
+        --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+        --ease: cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Typography upgrade — Segoe UI Variable (Win11) cai bonito */
+    body, .nav-link, .sidebar-head h3, .page-header h1, button, input {
+        font-family: 'Inter', 'Segoe UI Variable', -apple-system,
+                     BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+        font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
+    }
+    code, .conf-val, pre {
+        font-family: 'JetBrains Mono', 'Cascadia Code', 'Consolas',
+                     'SF Mono', monospace;
+        font-feature-settings: "calt", "liga", "ss01", "ss02";
+    }
+    body { color: var(--c-text); letter-spacing: -0.005em; }
+    h1, h2, h3 { letter-spacing: -0.015em; font-weight: 700; }
+
+    /* === Animations === */
+    @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(8px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(255, 77, 79, 0.5); }
+        50%      { box-shadow: 0 0 0 14px rgba(255, 77, 79, 0); }
+    }
+    @keyframes shimmer {
+        0%   { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+    }
+    @keyframes scaleIn {
+        from { opacity: 0; transform: scale(0.96); }
+        to   { opacity: 1; transform: scale(1); }
+    }
+
+    /* Apply stagger to cards */
+    .card {
+        animation: fadeUp 0.5s var(--ease-out) both;
+        transition: border-color 0.2s var(--ease), transform 0.15s var(--ease);
+    }
+    .card:nth-child(1) { animation-delay: 0ms; }
+    .card:nth-child(2) { animation-delay: 40ms; }
+    .card:nth-child(3) { animation-delay: 80ms; }
+    .card:nth-child(4) { animation-delay: 120ms; }
+    .card:nth-child(5) { animation-delay: 160ms; }
+    .card:nth-child(6) { animation-delay: 200ms; }
+    .card:nth-child(7) { animation-delay: 240ms; }
+    .card:nth-child(n+8) { animation-delay: 280ms; }
+    .sidebar { animation: fadeUp 0.4s var(--ease-out) both; }
+    .page-header h1 {
+        background-size: 200% 100%;
+        animation: shimmer 8s linear infinite;
+    }
+
+    /* Big verdict pulse for CHEATER */
+    .big-verdict {
+        animation: scaleIn 0.6s var(--ease-out) both;
+        text-shadow: 0 0 24px currentColor;
+    }
+
+    /* === Hovers refined === */
+    .card:hover {
+        transform: translateY(-1px);
+        border-color: var(--c-border);
+    }
+    .stat {
+        transition: transform 0.15s var(--ease), background 0.15s var(--ease);
+    }
+    .stat:hover {
+        transform: translateY(-2px);
+        background: var(--c-bg-3) !important;
+    }
+    code {
+        transition: background 0.15s var(--ease), color 0.15s var(--ease);
+    }
+    code:hover { background: var(--c-bg-4); color: #ffd680; }
+
+    /* === Better neutrals on existing components === */
+    body { background: var(--c-bg-1); }
+    .sidebar { background: var(--c-bg-0); border-color: var(--c-border); }
+    .card { background: var(--c-bg-3); border-color: var(--c-border); }
+    .chart-card, .stat, code { background: var(--c-bg-1); }
+    .stat { border-color: var(--c-border); }
+    th { background: var(--c-bg-4); color: var(--c-text-mute); }
+    .controls input { background: var(--c-bg-1); border-color: var(--c-border); }
+
+    /* === Lightbox for screenshots === */
+    .lightbox {
+        position: fixed; inset: 0; z-index: 1000;
+        background: rgba(0, 0, 0, 0.92);
+        backdrop-filter: blur(8px);
+        display: none; align-items: center; justify-content: center;
+        padding: 32px;
+        animation: scaleIn 0.2s var(--ease-out);
+        cursor: zoom-out;
+    }
+    .lightbox.active { display: flex; }
+    .lightbox img {
+        max-width: 100%; max-height: 100%;
+        object-fit: contain;
+        border-radius: 8px;
+        box-shadow: 0 24px 72px rgba(0, 0, 0, 0.6);
+        cursor: default;
+    }
+    .lightbox-close {
+        position: absolute; top: 24px; right: 24px;
+        background: rgba(255, 255, 255, 0.1); color: #fff;
+        border: none; width: 40px; height: 40px;
+        border-radius: 50%; cursor: pointer;
+        font-size: 20px;
+        transition: background 0.15s;
+    }
+    .lightbox-close:hover { background: rgba(255, 255, 255, 0.2); }
+    .lightbox-hint {
+        position: absolute; bottom: 24px;
+        color: var(--c-text-soft); font-size: 12px;
+        letter-spacing: 1px;
+    }
+
+    /* Toast for copy feedback */
+    .toast {
+        position: fixed; bottom: 24px; right: 24px; z-index: 999;
+        background: var(--c-green); color: #000;
+        padding: 12px 20px; border-radius: 8px;
+        font-weight: 600; font-size: 13px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        animation: fadeUp 0.3s var(--ease-out);
+    }
+
+    /* Focus visible (a11y) */
+    *:focus-visible {
+        outline: 2px solid var(--c-red);
+        outline-offset: 2px;
+        border-radius: 4px;
+    }
+    *:focus:not(:focus-visible) { outline: none; }
+
+    /* Selection */
+    ::selection { background: var(--c-red); color: #000; }
+
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+            animation-duration: 0.01ms !important;
+            transition-duration: 0.01ms !important;
+        }
+    }
+
+
+    /* ================================================================
+       === Calm pass — quieter, more deliberate
+       ================================================================ */
+
+    color-scheme: dark;
+
+    :root {
+        accent-color: var(--c-red);
+    }
+
+    /* Tabular figures + slashed zero — números alinhados verticalmente,
+       sem confundir 0/O. Diferença sutil mas notável em stats grandes. */
+    .stat .num, .conf-val, .hc-count, code, time,
+    .verdict-sub, .donut text, .bar-count,
+    .stats, .verdict-sub code {
+        font-variant-numeric: tabular-nums lining-nums slashed-zero;
+    }
+
+    /* Headings — peso mais variado, tracking refinado */
+    h1, h2, h3 {
+        font-weight: 600;
+        letter-spacing: -0.011em;
+        text-wrap: balance;
+    }
+    .page-header h1 {
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: var(--c-text);
+        background: none;
+        -webkit-text-fill-color: var(--c-text);
+        margin: 0;
+    }
+    .page-header h1::first-letter {
+        color: var(--c-red);
+    }
+
+    /* Animations mínimas — só de entrada, sem loops infinitos */
+    @keyframes drift {
+        from { opacity: 0; transform: translateY(6px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes barGrow {
+        from { width: 0; }
+        to   { width: var(--final-width, 100%); }
+    }
+    @keyframes donutDraw {
+        from { stroke-dashoffset: 314; }
+    }
+
+    /* Cards — sem hover lift, sem ring, sem gradient. Só border-color shift. */
+    .card {
+        position: relative;
+        animation: drift 0.45s var(--ease-out) both;
+        transition: border-color 0.2s var(--ease);
+    }
+    .card:hover {
+        border-color: var(--c-bg-4);
+    }
+    .card.status-suspicious {
+        border-color: rgba(255, 77, 79, 0.18);
+    }
+    .card.status-suspicious::after {
+        content: ''; position: absolute; top: 16px; bottom: 16px; left: 0;
+        width: 2px;
+        background: var(--c-red);
+        border-radius: 0 1px 1px 0;
+    }
+
+    /* Sidebar — entrada simples, sem stagger */
+    .sidebar { animation: drift 0.4s var(--ease-out) both; }
+    .nav-link {
+        position: relative;
+        transition: background 0.12s var(--ease), color 0.12s, border-left-color 0.12s;
+    }
+    .nav-link:hover {
+        background: rgba(255, 255, 255, 0.025);
+    }
+    .nav-badge {
+        font-variant-numeric: tabular-nums;
+    }
+    .nav-score {
+        font-variant-numeric: tabular-nums;
+        font-weight: 700;
+    }
+
+    /* Stats — pop simples, sem shimmer overlay */
+    .stat { animation: drift 0.4s var(--ease-out) both; }
+    .stat:nth-child(1) { animation-delay: 30ms; }
+    .stat:nth-child(2) { animation-delay: 60ms; }
+    .stat:nth-child(3) { animation-delay: 90ms; }
+    .stat:nth-child(4) { animation-delay: 120ms; }
+    .stat:nth-child(5) { animation-delay: 150ms; }
+    .stat:nth-child(6) { animation-delay: 180ms; }
+    .stat:hover {
+        background: var(--c-bg-2) !important;
+        transform: none;
+    }
+    .stat .num {
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        font-feature-settings: "tnum", "lnum", "zero";
+    }
+
+    /* Verdict — sem 3D, sem halo, sem magnet. Só uma entrada limpa. */
+    .big-verdict {
+        animation: drift 0.5s var(--ease-out) both;
+        font-weight: 700;
+        letter-spacing: -0.025em;
+    }
+
+    /* Bars — cor sólida quente, anima 1x */
+    .bar-fill {
+        background: var(--c-red);
+        animation: barGrow 1s 0.2s var(--ease-out) both;
+        will-change: width;
+    }
+    .bar-row .bar-count {
+        font-weight: 600;
+        color: var(--c-text-mute);
+    }
+
+    /* Donut — fade + draw 1x, sem loops */
+    .donut circle:not(:first-child) {
+        stroke-dasharray: 314;
+        animation: donutDraw 0.9s 0.3s var(--ease-out) both;
+        animation-fill-mode: backwards;
+    }
+
+    /* Timeline dots — apenas hover scale, sem pop entry confuso */
+    .timeline .tl-dot {
+        transition: transform 0.15s var(--ease), box-shadow 0.15s;
+    }
+    .timeline .tl-dot:hover {
+        transform: translate(-50%, -50%) scale(1.6);
+        box-shadow: 0 0 12px currentColor;
+        z-index: 50;
+    }
+
+    /* Empty state — sem float infinito */
+    .empty-state .empty-icon { display: inline-block; opacity: 0.9; }
+
+    /* Charts — entry simples */
+    .chart-card { animation: drift 0.5s var(--ease-out) both; }
+    .chart-card:nth-child(2) { animation-delay: 80ms; }
+    .chart-card:hover { border-color: var(--c-bg-4); }
+
+    /* Filter buttons — sem ::before sweep, hover só com opacity */
+    .filter-btn {
+        transition: opacity 0.12s, background 0.12s;
+    }
+    .filter-btn:hover { opacity: 0.85; }
+    .filter-btn:active { transform: scale(0.97); }
+
+    /* Search input focus — só border, sem ring */
+    .controls input {
+        transition: border-color 0.15s, background 0.15s;
+    }
+    .controls input:focus {
+        border-color: var(--c-text-mute);
+        background: var(--c-bg-2);
+    }
+
+    /* Rows */
+    tbody tr { transition: background 0.12s; }
+    tbody tr:hover { background: rgba(255, 255, 255, 0.02); }
+    tbody tr.row-high:hover { background: rgba(255, 77, 79, 0.06); }
+
+    /* Code — sem ripple, hover só com bg shift */
+    code {
+        transition: background 0.12s, color 0.12s;
+    }
+
+    /* High-confidence card — borda vermelha sólida, sem gradient animado */
+    .high-confidence {
+        border-color: rgba(255, 77, 79, 0.5);
+    }
+
+    /* Details summary — só rotate do triângulo, sem slide do título */
+    details > summary::before {
+        transition: transform 0.2s var(--ease);
+    }
+    details summary h2 {
+        transition: color 0.15s;
+    }
+    details summary:hover h2 { color: var(--c-text); }
+
+    /* FP badge */
+    .fp-badge {
+        cursor: help;
+        font-weight: 500;
+        letter-spacing: 0;
+    }
+
+    /* Lightbox close — sem rotate gimmick */
+    .lightbox-close {
+        transition: background 0.15s;
+    }
+    .lightbox-close:hover { background: rgba(255, 255, 255, 0.18); }
+
+    /* Toast — sombra discreta */
+    .toast {
+        animation: drift 0.25s var(--ease-out) both;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Smooth scroll — só se user não preferir reduzido */
+    @media (prefers-reduced-motion: no-preference) {
+        html { scroll-behavior: smooth; }
+    }
+
+    /* Selection refinada */
+    ::selection {
+        background: rgba(255, 77, 79, 0.25);
+        color: var(--c-text);
+    }
+
+    /* Borders mais consistentes em tudo */
+    .card, .chart-card, .stat, .controls input {
+        border-color: var(--c-border);
+    }
+
+    /* Spacing scale aplicada onde tava off */
+    .stats { gap: 8px; }
+    .chart-card { padding: 24px; }
+    .nav-group { margin-bottom: 28px; }
+    .nav-link { padding: 8px 24px; }
+
+    /* Detalhes tipográficos finais */
+    .desc { color: var(--c-text-mute); line-height: 1.6; }
+    .summary { color: var(--c-text); font-weight: 500; }
+    code {
+        background: var(--c-bg-1);
+        border: 1px solid var(--c-border);
+        color: #ffc266;
+        padding: 1px 6px;
+        font-size: 12px;
+        border-radius: 4px;
+    }
+
+    /* ================================================================
+       === Functional pass — usability features
+       ================================================================ */
+
+    /* Skip link (a11y) */
+    .skip-link {
+        position: absolute; top: -100px; left: 0; z-index: 9999;
+        background: var(--c-red); color: #000;
+        padding: 12px 20px; font-weight: 600;
+        text-decoration: none;
+        transition: top 0.15s;
+    }
+    .skip-link:focus { top: 0; }
+
+    /* Screen reader only */
+    .sr-only {
+        position: absolute; width: 1px; height: 1px;
+        padding: 0; margin: -1px; overflow: hidden;
+        clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+    }
+
+    /* Controls meta row */
+    .controls-meta {
+        display: flex; justify-content: space-between; align-items: center;
+        margin-top: 14px;
+        font-size: 12px; color: var(--c-text-soft);
+        flex-wrap: wrap; gap: 8px;
+    }
+    #visible-count { font-variant-numeric: tabular-nums; }
+    .control-divider {
+        width: 1px; height: 20px;
+        background: var(--c-border);
+        margin: 0 4px;
+    }
+    .filter-btn.ghost {
+        background: transparent;
+        color: var(--c-text-mute);
+        border: 1px solid var(--c-border);
+    }
+    .filter-btn.ghost:hover {
+        color: var(--c-text);
+        border-color: var(--c-bg-4);
+        opacity: 1;
+    }
+
+    /* Keyboard hints */
+    .kbd-hint { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    kbd {
+        display: inline-block;
+        padding: 2px 6px;
+        background: var(--c-bg-1);
+        border: 1px solid var(--c-border);
+        border-bottom-width: 2px;
+        border-radius: 3px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 10px;
+        color: var(--c-text);
+        line-height: 1;
+    }
+
+    /* Mini-mapa de severidade na sidebar */
+    .nav-link {
+        display: flex; align-items: center; gap: 8px;
+    }
+    .nav-link-label {
+        flex: 1; overflow: hidden; text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .mini-sev {
+        width: 6px; height: 6px;
+        border-radius: 50%; flex-shrink: 0;
+    }
+    .mini-high   { background: var(--c-red);    }
+    .mini-medium { background: var(--c-orange); }
+    .mini-low    { background: var(--c-yellow); }
+    .mini-none   { background: transparent; border: 1px solid var(--c-border); }
+
+    /* Zebra stripes sutis nas tabelas */
+    tbody tr:nth-child(even) {
+        background: rgba(255, 255, 255, 0.012);
+    }
+
+    /* Sort headers */
+    .sortable th.sort-col {
+        cursor: pointer;
+        user-select: none;
+        transition: color 0.12s, background 0.12s;
+    }
+    .sortable th.sort-col:hover {
+        color: var(--c-text);
+        background: var(--c-bg-3);
+    }
+    .sort-indicator {
+        opacity: 0.4;
+        font-size: 10px;
+        margin-left: 4px;
+        transition: opacity 0.15s, transform 0.15s;
+    }
+    th.sort-col.sort-active .sort-indicator { opacity: 1; }
+    th.sort-col.sort-asc .sort-indicator { transform: rotate(180deg); }
+
+    /* Empty state SVG */
+    .empty-svg {
+        width: 80px; height: 80px;
+        margin: 0 auto 12px;
+        display: block;
+    }
+
+    /* Verificação de Sessão */
+    .session { border-left: 3px solid var(--c-green); }
+    .sess-grid { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+    .sess-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .sess-k {
+        flex: 0 0 160px; color: var(--c-text-soft);
+        font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
+    }
+    .sess-codewrap { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .sess-code {
+        font-family: 'JetBrains Mono', monospace; font-weight: 700;
+        font-size: 18px; letter-spacing: 2px;
+        color: var(--c-green);
+        background: var(--c-bg-1); border: 1px solid var(--c-border);
+        padding: 4px 12px; border-radius: 6px;
+    }
+    .sess-code.sess-none { color: var(--c-text-faint); }
+    .sess-ok   { color: var(--c-green); font-size: 12px; }
+    .sess-warn { color: var(--c-orange); font-size: 12px; }
+
+    /* ================================================================
+       === Readability pass — pills, sticky headers, clamp, hero
+       ================================================================ */
+
+    /* Severity como PILL sólida (substitui dot+texto) */
+    .pill {
+        display: inline-block; padding: 3px 10px; border-radius: 999px;
+        font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
+        line-height: 1.4; white-space: nowrap;
+        border: 1px solid transparent;
+    }
+    .pill-high   { background: rgba(255,77,79,0.16);  color: #ff7173; border-color: rgba(255,77,79,0.35); }
+    .pill-medium { background: rgba(255,176,32,0.14); color: #ffc04d; border-color: rgba(255,176,32,0.3); }
+    .pill-low    { background: rgba(255,224,102,0.12);color: #ffe066; border-color: rgba(255,224,102,0.25); }
+    .sev { white-space: nowrap; }
+
+    /* Linhas: faixa lateral colorida em vez de fundo gritante */
+    tr.row-high   { background: transparent; box-shadow: inset 3px 0 0 var(--c-red); }
+    tr.row-medium { background: transparent; box-shadow: inset 3px 0 0 var(--c-orange); }
+    tr.row-low    { box-shadow: inset 3px 0 0 rgba(255,224,102,0.4); }
+    td.sev { padding-left: 14px; }
+
+    /* Sticky table header — não perde o cabeçalho em tabela longa */
+    table.sortable thead th {
+        position: sticky; top: 0; z-index: 5;
+        background: var(--c-bg-4);
+        box-shadow: 0 1px 0 var(--c-border);
+    }
+
+    /* Detalhe truncável: 2 linhas, expande no clique */
+    code.clamp {
+        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+        overflow: hidden; white-space: pre-wrap; word-break: break-word;
+        cursor: zoom-in; max-width: 520px;
+    }
+    code.clamp.expanded {
+        -webkit-line-clamp: unset; display: block; cursor: zoom-out;
+    }
+    td.detail { max-width: 540px; }
+
+    /* Coluna de severidade enxuta */
+    th[data-sort="sev"] { width: 120px; }
+    th[data-sort="conf"] { width: 80px; }
+    th[data-sort="ts"]   { width: 150px; }
+
+    /* Hero do veredito — mais presença, sóbrio */
+    .overview {
+        display: grid; grid-template-columns: 1fr auto; gap: 20px;
+        align-items: center;
+    }
+    .overview h2 { grid-column: 1 / -1; }
+    .overview .big-verdict {
+        text-align: left; margin: 0; font-size: 30px;
+        grid-column: 1; align-self: center;
+    }
+    .overview .verdict-sub { grid-column: 1; margin: 0; text-align: left; }
+    .overview .stats {
+        grid-column: 2; grid-row: 2 / 4; justify-content: flex-end;
+        gap: 8px;
+    }
+    @media (max-width: 720px) {
+        .overview { grid-template-columns: 1fr; }
+        .overview .big-verdict, .overview .verdict-sub { text-align: center; }
+.text-verdict {
+    font-size: 14px; font-weight: 800; letter-spacing: 1.5px;
+    font-family: 'Consolas', monospace;
+}
+        .overview .stats { grid-column: 1; justify-content: center; }
+    }
+
+    /* Focus styles refinados */
+    .nav-link:focus-visible {
+        outline: none;
+        background: rgba(255, 77, 79, 0.08);
+        box-shadow: inset 3px 0 0 var(--c-red);
+    }
+    button:focus-visible, [tabindex]:focus-visible {
+        outline: 2px solid var(--c-red);
+        outline-offset: 1px;
+    }
+
+    /* Hidden state pra elementos filtrados (com transition smooth) */
+    [data-hidden="true"] {
+        display: none !important;
+    }
+
+    /* Print refinements */
+    @media print {
+        .controls, .controls-meta, .skip-link, .kbd-hint,
+        .sort-indicator, .lightbox, .toast { display: none !important; }
+        details { open: ""; }
+        details > summary::before { display: none; }
+        .empty-svg circle { stroke: #3fbf7f; }
+    }
+
+    /* ================================================================
+       === IDENTIDADE: terminal forense
+       Monospace em tudo, paleta âmbar sobre preto profundo, molduras de
+       terminal. Vem por último -> tem precedência sobre o tema anterior.
+       ================================================================ */
+
+    :root {
+        --c-bg-0: #060607;
+        --c-bg-1: #0a0a0b;
+        --c-bg-2: #0f0f11;
+        --c-bg-3: #121214;
+        --c-bg-4: #1a1a1d;
+        --c-border: #242420;
+        --c-border-soft: #1a1a18;
+        --c-text: #d8d2c4;        /* off-white quente */
+        --c-text-mute: #8f897b;
+        --c-text-soft: #6a655a;
+        --c-text-faint: #4a463e;
+        --c-amber: #e8b339;       /* cor de marca */
+        --c-red: #ff5f56;
+        --c-orange: #e8b339;
+        --c-yellow: #d8c47a;
+        --c-green: #5fcf8f;
+        accent-color: #e8b339;
+    }
+
+    /* Monospace em toda a interface — núcleo da identidade */
+    body, .nav-link, .sidebar-head h3, .page-header h1, button, input,
+    h1, h2, h3, .big-verdict, .stat .num, kbd, .pill, code, .sub, .desc,
+    .summary, th, td, .wordmark, .nav-group-title {
+        font-family: 'JetBrains Mono', 'Cascadia Code', 'Cascadia Mono',
+                     'Consolas', 'SF Mono', ui-monospace, monospace;
+    }
+    body {
+        background: var(--c-bg-1);
+        color: var(--c-text);
+        letter-spacing: 0;
+    }
+    h1, h2, h3 { letter-spacing: 0; font-weight: 700; }
+
+    /* Wordmark de terminal no lugar do logo */
+    .wordmark {
+        font-size: 19px; font-weight: 700; color: var(--c-amber);
+        letter-spacing: 1px; line-height: 1;
+    }
+    .wm-prompt { color: var(--c-green); margin-right: 2px; }
+    .wordmark-sub {
+        color: var(--c-text-soft); font-size: 10.5px;
+        margin: 6px 0 4px; letter-spacing: 0.3px;
+    }
+
+    /* Cards e seções: cantos retos, borda âmbar discreta no hover */
+    .card {
+        background: var(--c-bg-2);
+        border: 1px solid var(--c-border);
+        border-radius: 4px;
+    }
+    .card:hover { border-color: #34301f; }
+    .card h2 {
+        color: var(--c-text);
+        font-size: 14px; text-transform: lowercase; letter-spacing: 0.5px;
+    }
+    /* Sem prefixos decorativos nos títulos — texto direto. */
+    .card h2::before { content: none; }
+    .status-suspicious h2::before { content: none; }
+
+    /* Sidebar: barra de terminal */
+    .sidebar { background: var(--c-bg-0); border-right: 1px solid var(--c-border); }
+    .sidebar-head { border-bottom: 1px solid var(--c-border); }
+    .nav-group-title {
+        color: var(--c-text-faint); text-transform: lowercase;
+        font-size: 10px; letter-spacing: 1px;
+    }
+    .nav-group-title::before { content: none; }
+    .nav-link { color: var(--c-text-mute); font-size: 12px; border-radius: 3px; }
+    .nav-link:hover { background: rgba(232,179,57,0.06); color: var(--c-text); }
+    .nav-link.nav-hit { color: var(--c-text); }
+    .nav-badge {
+        background: transparent; color: var(--c-amber);
+        border: 1px solid #34301f; border-radius: 3px;
+        padding: 0 6px; font-size: 10px;
+    }
+    .nav-score {
+        border-radius: 3px; font-weight: 700; color: #060607;
+    }
+
+    /* Page header como title-bar de terminal */
+    .page-header {
+        border: 1px solid var(--c-border); border-radius: 4px;
+        background: var(--c-bg-2); padding: 0; overflow: hidden;
+    }
+    .term-bar {
+        display: flex; align-items: center; gap: 7px;
+        background: var(--c-bg-3); padding: 9px 14px;
+        border-bottom: 1px solid var(--c-border);
+    }
+    .term-dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+    .td-r { background: #ff5f56; } .td-y { background: #e8b339; } .td-g { background: #5fcf8f; }
+    .term-bar-title {
+        color: var(--c-text-soft); font-size: 11px; margin-left: 6px;
+    }
+    .term-body { padding: 14px; }
+    .term-body .h1line { color: var(--c-amber); font-weight: 700; font-size: 16px; }
+    .page-header h1 {
+        all: unset; color: var(--c-amber); font-weight: 700;
+        font-size: 16px; font-family: inherit;
+    }
+    .page-header .sub { color: var(--c-text-soft); font-size: 11.5px; margin-top: 4px; }
+
+    /* Severidade como tag de terminal [HIGH], não pill arredondada */
+    .pill {
+        border-radius: 2px; padding: 2px 7px; font-weight: 700;
+        border: 1px solid currentColor; background: transparent;
+    }
+    .pill::before { content: "["; } .pill::after { content: "]"; }
+    .pill-high   { color: #ff5f56; }
+    .pill-medium { color: #e8b339; }
+    .pill-low    { color: #9c8f6a; }
+
+    /* Tabela */
+    th { background: var(--c-bg-3); color: var(--c-text-mute);
+         text-transform: lowercase; letter-spacing: 0.5px; }
+    table.sortable thead th { background: var(--c-bg-3); }
+    tr.row-high   { box-shadow: inset 2px 0 0 #ff5f56; }
+    tr.row-medium { box-shadow: inset 2px 0 0 #e8b339; }
+    tr.row-low    { box-shadow: inset 2px 0 0 #9c8f6a; }
+    code {
+        background: var(--c-bg-1); border: 1px solid var(--c-border);
+        color: var(--c-amber); border-radius: 2px;
+    }
+
+    /* Estado/score e veredito */
+    .big-verdict { letter-spacing: 1px; text-shadow: none; }
+    .stat { background: var(--c-bg-1); border: 1px solid var(--c-border); border-radius: 3px; }
+    .stat .num { color: var(--c-text); }
+
+    /* Inputs e botões */
+    .controls input {
+        background: var(--c-bg-1); border: 1px solid var(--c-border);
+        color: var(--c-text); border-radius: 3px;
+    }
+    .controls input:focus { border-color: var(--c-amber); background: var(--c-bg-2); }
+    .filter-btn { border-radius: 3px; }
+    .filter-btn.ghost { border: 1px solid var(--c-border); color: var(--c-text-mute); }
+    kbd {
+        background: var(--c-bg-1); border: 1px solid var(--c-border);
+        border-bottom-width: 2px; color: var(--c-amber);
+    }
+
+    ::selection { background: rgba(232,179,57,0.3); color: var(--c-text); }
+    ::-webkit-scrollbar-thumb {
+        background: #34301f; border: 2px solid var(--c-bg-0); border-radius: 6px;
+    }
+    ::-webkit-scrollbar-thumb:hover { background: #4a4326; }
+    *:focus-visible { outline: 2px solid var(--c-amber); }
+
+    /* ================================================================
+       === Animações de terminal (temáticas, contidas)
+       Só o que um terminal faz de verdade: digitar, cursor piscando,
+       dots acendendo. Nada de gradiente/glow/shimmer. Tudo de entrada
+       (uma vez), exceto o cursor. Respeita prefers-reduced-motion.
+       ================================================================ */
+    @media (prefers-reduced-motion: no-preference) {
+
+        /* Título "TELADOR" digitado uma vez no load */
+        @keyframes typing { from { width: 0; } to { width: 7ch; } }
+        .term-body .typed {
+            display: inline-block; overflow: hidden; white-space: nowrap;
+            vertical-align: bottom;
+            width: 7ch;
+            animation: typing 1.2s steps(7, end) 0.2s both;
+        }
+
+        /* Cursor de bloco piscando ao lado do título (assinatura de terminal) */
+        @keyframes blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+        .term-cursor {
+            display: inline-block; width: 9px; height: 1.05em;
+            background: var(--c-amber); margin-left: 3px;
+            vertical-align: text-bottom;
+            animation: blink 1.1s step-end infinite;
+        }
+
+        /* Os três dots da barra acendem em sequência */
+        @keyframes dotOn { from { opacity: 0; transform: scale(0.4); }
+                           to   { opacity: 1; transform: scale(1); } }
+        .term-bar .term-dot { animation: dotOn 0.25s var(--ease-out) both; }
+        .term-bar .td-r { animation-delay: 0.00s; }
+        .term-bar .td-y { animation-delay: 0.12s; }
+        .term-bar .td-g { animation-delay: 0.24s; }
+        .term-bar-title { animation: drift 0.4s 0.36s var(--ease-out) both; }
+
+        /* Linhas da sidebar entram em cascata curta (boot-like) */
+        .sidebar .nav-link { animation: drift 0.3s var(--ease-out) both; }
+        .sidebar .nav-link:nth-child(1) { animation-delay: 0.02s; }
+        .sidebar .nav-link:nth-child(2) { animation-delay: 0.05s; }
+        .sidebar .nav-link:nth-child(3) { animation-delay: 0.08s; }
+        .sidebar .nav-link:nth-child(4) { animation-delay: 0.11s; }
+        .sidebar .nav-link:nth-child(5) { animation-delay: 0.14s; }
+        .sidebar .nav-link:nth-child(n+6) { animation-delay: 0.17s; }
+
+        /* Barras do gráfico preenchem da esquerda */
+        @keyframes barFill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+        .bar-fill { transform-origin: left; animation: barFill 0.6s var(--ease-out) 0.2s both; }
+    }
+
+    /* Sem animação para quem pede movimento reduzido: cursor estático visível */
+    @media (prefers-reduced-motion: reduce) {
+        .term-body .typed { width: auto; }
+        .term-cursor { display: none; }
+    }
+    </style>
+</head>
+<body>
+    <a href="#main-content" class="skip-link">Pular pro conteúdo</a>
+    
+    <aside class="sidebar">
+        <div class="sidebar-head">
+            <div class="wordmark"><span class="wm-prompt">&gt;_</span> TELADOR</div>
+            <div class="wordmark-sub">roblox screenshare · análise forense local</div>
+            {% if verdict %}
+            <div class="nav-score" style="background:{{ verdict.get('color', '#888') }}">
+                Score {{ verdict.get('score', 0) }}
+            </div>
+            {% endif %}
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-group">
+                <div class="nav-group-title">Visão geral</div>
+                <a href="#summary" class="nav-link">📊 Resumo</a>
+                <a href="#session" class="nav-link">🔐 Sessão</a>
+                <a href="#high-confidence" class="nav-link">🎯 Cross-Correlation</a>
+                <a href="#fp-stats" class="nav-link">🛡️ FP Filter</a>
+                <a href="#timeline" class="nav-link">🕐 Timeline</a>
+                <a href="#pe-analysis" class="nav-link">🔬 PE Analysis</a>
+                <a href="#charts" class="nav-link">📈 Charts</a>
+                <a href="#sysinfo" class="nav-link">💻 Sistema</a>
+                <a href="#screenshots" class="nav-link">📸 Screenshots</a>
+            </div>
+            <div class="nav-group">
+                <div class="nav-group-title">Scanners ({{ findings|length }})</div>
+                {% for f in findings %}
+                {% set n_items = f.get('items', [])|length %}
+                {% set slug = f.name.lower().replace(" ", "-").replace("(", "").replace(")", "").replace("/", "-") %}
+                {% set worst = namespace(val='none') %}
+                {% for i in f.get('items', []) %}
+                    {% if i.get('severity') == 'high' %}{% set worst.val = 'high' %}{% endif %}
+                    {% if i.get('severity') == 'medium' and worst.val != 'high' %}{% set worst.val = 'medium' %}{% endif %}
+                    {% if i.get('severity') == 'low' and worst.val == 'none' %}{% set worst.val = 'low' %}{% endif %}
+                {% endfor %}
+                <a href="#scan-{{ slug }}" class="nav-link {% if n_items > 0 %}nav-hit{% else %}nav-clean{% endif %}">
+                    <span class="mini-sev mini-{{ worst.val }}" aria-hidden="true"></span>
+                    <span class="nav-link-label">{{ f.name }}</span>
+                    {% if n_items > 0 %}<span class="nav-badge">{{ n_items }}</span>{% endif %}
+                </a>
+                {% endfor %}
+            </div>
+        </nav>
+    </aside>
+
+    <main class="main-content" id="main-content" tabindex="-1">
+    <header class="page-header">
+        <div class="term-bar">
+            <span class="term-dot td-r"></span>
+            <span class="term-dot td-y"></span>
+            <span class="term-dot td-g"></span>
+            <span class="term-bar-title">telador — relatório forense de screenshare</span>
+        </div>
+        <div class="term-body">
+            <div class="h1line"><span class="typed">TELADOR</span><span class="term-cursor" aria-hidden="true"></span></div>
+            <div class="sub">Análise forense local · veredito por correlação de evidências</div>
+            <div class="sub" style="margin-top:6px; font-size:12px; color:#777">{{ sys_info.get('host', '?') }} · {{ sys_info.get('user', '?') }} · {{ sys_info.get('scan_time', '') }}</div>
+        </div>
+    </header>
+
+    {% if sys_info.get('admin') == False %}
+    <div class="admin-warn">
+        <strong>⚠ SCAN LIMITADO — não rodou como administrador.</strong> 
+        As fontes forenses mais fortes (Prefetch, Amcache, BAM, Defender) 
+        não puderam ser lidas. Um resultado sem detecções aqui é 
+        <strong>inconclusivo</strong>, não inocenta — rode de novo como 
+        administrador pra ter um veredito confiável.
+    </div>
+    {% endif %}
+
+    <span id="verdict"></span>
+    {% if hero_dict %}
+    <section class="hero-verdict {{ hero_dict.state_class }}" style="--hv-accent: {{ hero_dict.color }}">
+        <div class="hv-icon-wrap">{{ hero_dict.hero_icon | safe }}</div>
+        <h1 class="hv-headline" style="color:{{ hero_dict.color }}">{{ hero_dict.headline }}</h1>
+        <div class="hv-sub">{{ hero_dict.sub_msg }}</div>
+        {% if hero_dict.global_conf is not none %}
+        <div class="hv-conf">Confidence: <strong style="color:{{ hero_dict.color }}">{{ hero_dict.global_conf }}%</strong></div>
+        {% endif %}
+        <div class="hv-actions">
+            <button class="hv-copy" type="button" data-summary="{{ hero_dict.summary_attr }}" onclick="teladorCopySummary(this)">📋 Copiar resumo</button>
+        </div>
+        {% if hero_dict.cards %}
+        <div class="hv-cards">
+            {% for c in hero_dict.cards %}
+            <article class="hv-card" style="border-left-color: {{ c.c_color }}">
+                <header class="hv-card-head">
+                    <div class="hv-target">
+                        <span class="hv-card-icon">{{ c.c_icon_svg | safe }}</span>
+                        <span class="hv-card-name">{{ c.label }}</span>
+                        <span class="hv-kind">{{ c.kind }}</span>
+                    </div>
+                    <div class="hv-card-verdict" style="color: {{ c.c_color }}">{{ c.verdict }}</div>
+                </header>
+                <div class="hv-card-meta">
+                    <span class="hv-meta-pill" style="background: {{ c.c_color }}20; color: {{ c.c_color }}; border: 1px solid {{ c.c_color }}50">
+                        Confidence {{ c.confidence_pct }}%
+                    </span>
+                    <span class="hv-meta-pill">
+                        Score {{ "%.1f"|format(c.score) }}
+                    </span>
+                    <span class="hv-meta-pill">
+                        {{ c.n_sources }} fonte{% if c.n_sources != 1 %}s{% endif %}
+                    </span>
+                    <span class="hv-meta-pill" style="color: {{ c.sev_color }}">
+                        sev: {{ c.worst_severity }}
+                    </span>
+                </div>
+                <ul class="hv-sources">
+                    {% for src_line in c.src_lines %}
+                    <li><span class="hv-check">✓</span> {{ src_line }}</li>
+                    {% endfor %}
+                </ul>
+                {% if c.first_seen %}
+                <div class="hv-time">Primeiro visto: <code>{{ c.first_seen }}</code></div>
+                {% endif %}
+            </article>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </section>
+    <script>
+    function teladorCopySummary(btn) {
+        var txt = btn.getAttribute('data-summary') || '';
+        var done = function() {
+            var old = btn.textContent;
+            btn.textContent = '✓ Copiado!';
+            btn.classList.add('copied');
+            setTimeout(function() { btn.textContent = old; btn.classList.remove('copied'); }, 1600);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(txt).then(done, function() { teladorFallbackCopy(txt, done); });
+        } else { teladorFallbackCopy(txt, done); }
+    }
+    function teladorFallbackCopy(txt, done) {
+        try {
+            var ta = document.createElement('textarea');
+            ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+            document.body.appendChild(ta); ta.select();
+            document.execCommand('copy'); document.body.removeChild(ta); done();
+        } catch (e) {}
+    }
+    </script>
+    {% endif %}
+
+    <span id="summary"></span>
+    {% if summary_dict %}
+    <section class="card overview">
+        <div class="card-head">
+            <h2>Detalhes técnicos do veredito</h2>
+            <span class="text-verdict" style="color:{{ summary_dict.verdict.color }}">{{ summary_dict.verdict.verdict }}</span>
+        </div>
+        <p class="desc">Estatísticas brutas do scan — abaixo do veredito por correlação acima. Hit mais recente: <code>{{ summary_dict.recent }}</code>.</p>
+        <div class="stats">
+            {% if summary_dict.verdict.get('critical') %}
+            <div class="stat"><div class="num" style="color:#ff2a2a">{{ summary_dict.verdict.critical }}</div><div>Critical</div></div>
+            {% endif %}
+            <div class="stat"><div class="num" style="color:#ff4d4f">{{ summary_dict.verdict.high }}</div><div>High</div></div>
+            <div class="stat"><div class="num" style="color:#ffb020">{{ summary_dict.verdict.medium }}</div><div>Medium</div></div>
+            <div class="stat"><div class="num" style="color:#ffe066">{{ summary_dict.verdict.low }}</div><div>Low</div></div>
+            <div class="stat"><div class="num" style="color:{{ summary_dict.verdict.color }}">{{ summary_dict.verdict.score }}</div><div>Score</div></div>
+            <div class="stat"><div class="num">{{ summary_dict.total }}</div><div>Hits totais</div></div>
+            <div class="stat"><div class="num" style="color:#888">{{ summary_dict.errors }}</div><div>Skips/Erros</div></div>
+        </div>
+    </section>
+    {% endif %}
+
+    {% if session_dict %}
+    <section class="card session" id="session">
+        <h2>🔐 Verificação de Sessão</h2>
+        <p class="desc">Prova de que este relatório foi gerado nesta SS ao vivo —
+        não é um relatório antigo reaproveitado.</p>
+        <div class="sess-grid">
+            <div class="sess-row"><span class="sess-k">ID da sessão</span><code>{{ session_dict.session_id }}</code></div>
+            <div class="sess-row"><span class="sess-k">Código do supervisor</span><span class="sess-codewrap">
+                {% if session_dict.code %}
+                <span class="sess-code">{{ session_dict.code }}</span><span class="sess-ok">✓ código informado pelo supervisor</span>
+                {% else %}
+                <span class="sess-code sess-none">—</span><span class="sess-warn">⚠ sem código — sessão NÃO verificada (rode com --codigo XYZ ditado pelo supervisor)</span>
+                {% endif %}
+            </span></div>
+            <div class="sess-row"><span class="sess-k">Gerado em</span><code>{{ session_dict.scan_time }}</code></div>
+            {% if session_dict.exe_hash %}
+            <div class="sess-row"><span class="sess-k">SHA256 do telador</span><code>{{ session_dict.exe_hash }}</code></div>
+            {% endif %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% if empty_state %}
+    <section class="card empty-state" aria-label="Sistema limpo">
+        <svg class="empty-svg" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <circle cx="32" cy="32" r="28" fill="none" stroke="#3fbf7f" stroke-width="2" opacity="0.4"/>
+            <circle cx="32" cy="32" r="22" fill="none" stroke="#3fbf7f" stroke-width="1.5" opacity="0.25"/>
+            <path d="M20 33 L29 42 L45 25" fill="none" stroke="#3fbf7f"
+                  stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <h2>Sistema limpo</h2>
+        <p>Nenhum hit nas categorias de detecção. Este sistema não apresenta
+        indícios de executores Roblox conhecidos, scripts de exploit,
+        ou ferramentas de cheating.</p>
+        <p class="empty-sub">Detecção é heurística — cheat novo ou renomeado pode escapar.
+        Conduza SS visual também.</p>
+    </section>
+    {% endif %}
+
+    <span id="high-confidence"></span>
+    {% if hc_list %}
+    <section class="card high-confidence">
+        <div class="card-head">
+            <h2>🎯 Cross-Correlation — ALTA CONFIANÇA</h2>
+            <span class="badge" style="background:#ff4d4f">CHEATER</span>
+        </div>
+        <p class="desc">Keywords que apareceram em 3+ categorias diferentes. Praticamente
+        impossível ser falso positivo — cara tentou apagar mas deixou rastro em várias fontes.</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Keyword</th>
+                    <th>Cobertura</th>
+                    <th>Onde apareceu</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for kw, count, sources_str, color in hc_list %}
+                <tr>
+                    <td class="hc-kw"><code style="color:{{ color }}; font-weight:700">{{ kw }}</code></td>
+                    <td class="hc-count">{{ count }} fontes</td>
+                    <td class="hc-sources">{{ sources_str }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+    {% endif %}
+
+    <span id="fp-stats"></span>
+    {% if fp_stats %}
+    <section class="card fp-stats">
+        <h2>🛡️ Filtro de Falsos Positivos</h2>
+        <p class="desc">Pós-processamento removeu/rebaixou hits prováveis-FP. Use <code>--strict</code> pra desligar.</p>
+        <div class="stats">
+            <div class="stat"><div class="num">{{ fp_stats.total_items_in }}</div><div>Hits brutos</div></div>
+            <div class="stat"><div class="num" style="color:#3fbf7f">{{ fp_stats.items_whitelisted }}</div><div>Whitelistados</div></div>
+            <div class="stat"><div class="num" style="color:#ffb020">{{ fp_stats.items_downgraded }}</div><div>Rebaixados</div></div>
+            <div class="stat"><div class="num">{{ fp_stats.total_items_out }}</div><div>Finais</div></div>
+        </div>
+        {% if fp_stats.get('is_dev_env') %}
+        <p><strong style="color:#ffb020">⚠ Ambiente de dev detectado.</strong>
+        Ferramentas como Cheat Engine, IDA, dnSpy, etc. foram rebaixadas pra LOW
+        (uso legítimo provável). Indicadores:</p>
+        <div class="dev-evidence">
+            {% for p in fp_stats.dev_evidence[:5] %}
+            <code>{{ p }}</code><br>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </section>
+    {% endif %}
+
+    <span id="timeline"></span>
+    {% if timeline_dict %}
+    <section class="card timeline">
+        <h2>🕐 Timeline de Atividade ({{ timeline_dict.hits }} hits)</h2>
+        <p class="desc">Cada ponto = 1 hit. Cluster denso = burst suspeito (ex: baixou cheat,
+        rodou, deletou tudo em 5 min).</p>
+        <div class="tl-range">
+            <span>{{ timeline_dict.min_ts_str }}</span>
+            <span style="color:#888">← {{ timeline_dict.duration_str }} →</span>
+            <span>{{ timeline_dict.max_ts_str }}</span>
+        </div>
+        <div class="tl-track">
+            {% for dot in timeline_dict.dots %}
+            <div class="tl-dot row-{{ dot.sev }}" style="left:{{ dot.pos }}%; background:{{ dot.color }}" title="{{ dot.tip }}"></div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <span id="pe-analysis"></span>
+    {% if pe_items %}
+    <section class="card pe-analysis">
+        <h2>🔬 PE Analysis ({{ pe_items|length }} executáveis)</h2>
+        <p class="desc">SHA256 + PE header dos .exe/.dll suspeitos. Packed/compile date recente = red flag.</p>
+        <table>
+            <thead><tr><th>Arquivo</th><th>SHA256</th><th>Compilado</th><th>Arch</th><th>Sections</th><th>Flags</th></tr></thead>
+            <tbody>
+                {% for row in pe_items %}
+                <tr>
+                    <td><code>{{ row.basename }}</code></td>
+                    <td><code style="font-size:10px">{{ row.sha }}</code></td>
+                    <td>{{ row.compile_ts }}</td>
+                    <td>{{ row.machine }}</td>
+                    <td><code style="font-size:11px">{{ row.sections }}</code></td>
+                    <td>
+                        {% if row.flags %}
+                        {% for flag in row.flags %}
+                        {{ flag | safe }}
+                        {% endfor %}
+                        {% else %}
+                        <span style="color:#888">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+    {% endif %}
+
+    {% if charts_dict %}
+    <section class="card charts" id="charts">
+        <h2>📈 Visualizações</h2>
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h3>Distribuição de Severidade</h3>
+                <svg viewBox="0 0 140 140" class="donut">
+                    <circle cx="70" cy="70" r="50" fill="none" stroke="#2a2a2e" stroke-width="14"/>
+                    <circle cx="70" cy="70" r="50" fill="none" stroke="#ff4d4f" stroke-width="14"
+                        stroke-dasharray="{{ charts_dict.high_dash }} {{ charts_dict.circumference }}" transform="rotate(-90 70 70)"/>
+                    <circle cx="70" cy="70" r="50" fill="none" stroke="#ffb020" stroke-width="14"
+                        stroke-dasharray="{{ charts_dict.med_dash }} {{ charts_dict.circumference }}"
+                        stroke-dashoffset="{{ charts_dict.med_offset }}" transform="rotate(-90 70 70)"/>
+                    <circle cx="70" cy="70" r="50" fill="none" stroke="#ffe066" stroke-width="14"
+                        stroke-dasharray="{{ charts_dict.low_dash }} {{ charts_dict.circumference }}"
+                        stroke-dashoffset="{{ charts_dict.low_offset }}" transform="rotate(-90 70 70)"/>
+                    <text x="70" y="68" text-anchor="middle" fill="{{ charts_dict.verdict_color }}"
+                        font-size="22" font-weight="800">{{ charts_dict.verdict_score }}</text>
+                    <text x="70" y="86" text-anchor="middle" fill="#888" font-size="10">SCORE</text>
+                </svg>
+                <div class="donut-legend">
+                    <span><span class="dot" style="background:#ff4d4f"></span> High {{ charts_dict.high }}</span>
+                    <span><span class="dot" style="background:#ffb020"></span> Medium {{ charts_dict.med }}</span>
+                    <span><span class="dot" style="background:#ffe066"></span> Low {{ charts_dict.low }}</span>
+                </div>
+            </div>
+            
+            <div class="chart-card">
+                <h3>Hits por Scanner (top {{ charts_dict.top|length }})</h3>
+                <div class="bars">
+                    {% if charts_dict.top %}
+                        {% for bar in charts_dict.top %}
+                        <div class="bar-row">
+                            <span class="bar-label">{{ bar.name }}</span>
+                            <div class="bar-track"><div class="bar-fill" style="width:{{ bar.pct }}%"></div></div>
+                            <span class="bar-count">{{ bar.c }}</span>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="empty">Sem hits</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    <span id="sysinfo"></span>
+    {% if sys_info_rows %}
+    <section class="card sysinfo">
+        <h2>Informações do Sistema</h2>
+        <table class="sys">
+            {% for k, v in sys_info_rows %}
+            <tr><th>{{ k }}</th><td>{{ v }}</td></tr>
+            {% endfor %}
+        </table>
+    </section>
+    {% endif %}
+
+    <span id="screenshots"></span>
+    {% if screenshot_pieces %}
+    <section class="card screenshots">
+        <h2>Capturas de tela (no momento da SS)</h2>
+        <p class="desc">Tiradas em {{ screenshot_time }}.
+        Clique pra ampliar.</p>
+        <div class="shots">
+            {% for p in screenshot_pieces %}
+            <div class="shot">
+                <div class="shot-label">{{ p.label }}</div>
+                <img src="data:image/png;base64,{{ p.b64 }}" alt="{{ p.key }}" />
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <section class="card controls" role="search">
+        <div class="controls-row">
+            <label for="search" class="sr-only">Buscar nos hits</label>
+            <input type="text" id="search"
+                   placeholder="Buscar (krnl, wave, .lua, downloads...)   ·   atalho: /"
+                   aria-label="Buscar nos hits" />
+            <div class="filters" role="group" aria-label="Filtrar por severidade">
+                <button class="filter-btn" data-sev="high"   aria-pressed="true" style="--c:#ff4d4f">High</button>
+                <button class="filter-btn" data-sev="medium" aria-pressed="true" style="--c:#ffb020">Medium</button>
+                <button class="filter-btn" data-sev="low"    aria-pressed="true" style="--c:#ffe066">Low</button>
+                <button id="show-all" class="filter-btn solid">Reset</button>
+                <span class="control-divider" aria-hidden="true"></span>
+                <button id="expand-all"   class="filter-btn ghost" type="button">Expandir tudo</button>
+                <button id="collapse-all" class="filter-btn ghost" type="button">Recolher</button>
+            </div>
+        </div>
+        <div class="controls-meta" aria-live="polite">
+            <span id="visible-count"></span>
+            <span class="kbd-hint">
+                <kbd>/</kbd> buscar · <kbd>J</kbd>/<kbd>K</kbd> próximo/anterior · <kbd>Esc</kbd> limpar
+            </span>
+        </div>
+    </section>
+
+    {% for section in findings %}
+    {% set slug = section.name.lower().replace(" ", "-").replace("(", "").replace(")", "").replace("/", "-") %}
+    {% set n_items = section.get('items', [])|length %}
+    <section class="card status-{{ section.status }}" id="scan-{{ slug }}">
+        <details{% if n_items > 0 %} open{% endif %}>
+            <summary class="card-head">
+                <h2>{{ section.name }}</h2>
+                <span class="badge" style="background:{{ section.badge_color }}">{{ section.badge_text }}</span>
+            </summary>
+            <p class="desc">{{ section.description }}</p>
+            <p class="summary">{{ section.summary }}</p>
+            {% if n_items > 0 %}
+            <table class="sortable">
+                <thead>
+                    <tr>
+                        <th class="sort-col" data-sort="sev" tabindex="0" role="button" aria-label="Ordenar por severidade">Severidade <span class="sort-indicator">↓</span></th>
+                        <th class="sort-col" data-sort="label" tabindex="0" role="button" aria-label="Ordenar por item">Item</th>
+                        <th>Detalhe</th>
+                        <th class="sort-col" data-sort="match" tabindex="0" role="button" aria-label="Ordenar por match">Match</th>
+                        <th class="sort-col" data-sort="conf" tabindex="0" role="button" aria-label="Ordenar por confidence">Conf.</th>
+                        <th class="sort-col" data-sort="ts" tabindex="0" role="button" aria-label="Ordenar por data">Quando</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in section.get('items', []) %}
+                    <tr class="row-{{ item.severity|default('low') }}" data-sev="{{ item.sev_rank }}" data-conf="{{ item.confidence or 0 }}" data-ts="{{ item.timestamp or '' }}">
+                        <td class="sev">
+                            <span class="pill pill-{{ item.severity|default('low') }}">{{ item.severity|default('low')|upper }}</span>
+                            {% if item.original_severity and item.original_severity != item.severity %}
+                            <span class="fp-badge" title="{{ item.fp_reason or '' }}">↓ era {{ item.original_severity|upper }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="label">{{ item.label|default('') }}</td>
+                        <td class="detail"><code class="clamp" title="clique pra expandir">{{ item.detail_text }}</code></td>
+                        <td class="match"><code>{{ item.matched|default('') }}</code></td>
+                        <td class="conf">
+                            {% if item.confidence is not none %}
+                            <div class="conf-bar"><div class="conf-fill" style="width:{{ item.confidence }}%; background:{{ item.conf_color }}"></div><span class="conf-val">{{ item.confidence }}</span></div>
+                            {% endif %}
+                        </td>
+                        <td class="ts"><time>{{ item.timestamp|default('') }}</time></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="empty">{{ section.error or 'Nenhum vestígio encontrado nesta categoria.' }}</p>
+            {% endif %}
+        </details>
+    </section>
+    {% endfor %}
+
+    {% if exe_hash %}
+    <div class="exe-hash">SHA256 do telador: <code>{{ self_hash }}</code></div>
+    {% endif %}
+
+    <footer class="page-footer">
+        Resultado é heurístico (baseado em nomes/locais conhecidos).
+        Pode haver falso positivo (ex.: alguém pesquisou sobre o tema) ou falso negativo (cheat com nome trocado).
+        Conduza a tela completa e verifique manualmente os pontos suspeitos.
+        <div class="report-attrib">
+            Relatório gerado pelo <span class="brand">Telador</span> ·
+            ferramenta forense de SS para Roblox · 100% local e open source<br>
+            <a href="https://combatroblox-forensics.vercel.app/" target="_blank" rel="noreferrer">combatroblox-forensics.vercel.app</a>
+            &nbsp;·&nbsp;
+            <a href="https://github.com/highdevian/combatroblox" target="_blank" rel="noreferrer">github.com/highdevian/combatroblox</a>
+        </div>
+    </footer>
+    </main>
+    
+<script>
+(function() {
+    const search = document.getElementById('search');
+    const filters = {high: true, medium: true, low: true};
+
+    function applyAll() {
+        document.querySelectorAll('tbody tr').forEach(tr => {
+            // Filtro de severidade
+            let sevOk = false;
+            for (const sev of Object.keys(filters)) {
+                if (tr.classList.contains('row-' + sev) && filters[sev]) {
+                    sevOk = true; break;
+                }
+            }
+            if (!tr.classList.contains('row-high') && !tr.classList.contains('row-medium') && !tr.classList.contains('row-low')) {
+                sevOk = true;  // linhas sem severidade (system info, high-conf) sempre visíveis
+            }
+
+            // Filtro de search
+            const q = (search.value || '').toLowerCase();
+            const textOk = !q || tr.textContent.toLowerCase().includes(q);
+
+            tr.style.display = (sevOk && textOk) ? '' : 'none';
+        });
+
+        // Esconde cards que ficaram sem linhas visíveis
+        document.querySelectorAll('section.card').forEach(card => {
+            const tbody = card.querySelector('tbody');
+            if (!tbody) return;
+            if (card.classList.contains('overview') || card.classList.contains('sysinfo')
+                || card.classList.contains('screenshots') || card.classList.contains('controls')
+                || card.classList.contains('high-confidence')) return;
+            const visible = Array.from(tbody.querySelectorAll('tr')).some(tr => tr.style.display !== 'none');
+            card.style.display = visible ? '' : 'none';
+        });
+    }
+
+    search.addEventListener('input', applyAll);
+
+    document.querySelectorAll('.filter-btn[data-sev]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const sev = btn.dataset.sev;
+            filters[sev] = !filters[sev];
+            btn.classList.toggle('off', !filters[sev]);
+            applyAll();
+        });
+    });
+
+    document.getElementById('show-all').addEventListener('click', () => {
+        for (const k of Object.keys(filters)) filters[k] = true;
+        document.querySelectorAll('.filter-btn[data-sev]').forEach(b => b.classList.remove('off'));
+        search.value = '';
+        applyAll();
+    });
+
+    // Click pra copiar em code blocks (com toast)
+    function showToast(msg) {
+        const t = document.createElement('div');
+        t.className = 'toast'; t.textContent = msg;
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 1600);
+    }
+    document.querySelectorAll('code').forEach(c => {
+        if (c.classList.contains('clamp')) return;  // truncável tem handler próprio
+        c.style.cursor = 'pointer';
+        c.title = 'Clique pra copiar';
+        c.addEventListener('click', (e) => {
+            if (e.target.closest('.lightbox')) return;
+            navigator.clipboard.writeText(c.textContent).then(() => {
+                showToast('✓ Copiado');
+            }).catch(() => {});
+        });
+    });
+
+    // === Detalhe truncável: clique expande/recolhe ===
+    document.querySelectorAll('code.clamp').forEach(c => {
+        c.addEventListener('click', () => c.classList.toggle('expanded'));
+        // Duplo-clique copia o conteúdo (acesso ao copy mantido)
+        c.addEventListener('dblclick', (e) => {
+            e.preventDefault();
+            navigator.clipboard.writeText(c.textContent).then(() => showToast('✓ Copiado')).catch(() => {});
+        });
+    });
+
+    // === Lightbox pra screenshots ===
+    const lb = document.createElement('div');
+    lb.className = 'lightbox';
+    lb.innerHTML = '<button class="lightbox-close" aria-label="Fechar">✕</button>' +
+                   '<img alt="" />' +
+                   '<div class="lightbox-hint">Clique fora ou ESC pra fechar</div>';
+    document.body.appendChild(lb);
+    const lbImg = lb.querySelector('img');
+    const lbClose = lb.querySelector('.lightbox-close');
+
+    function openLightbox(src, alt) {
+        lbImg.src = src;
+        lbImg.alt = alt || '';
+        lb.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeLightbox() {
+        lb.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+    lb.addEventListener('click', (e) => {
+        if (e.target === lb || e.target === lbClose) closeLightbox();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeLightbox();
+    });
+
+    document.querySelectorAll('.screenshots img').forEach(img => {
+        img.style.cursor = 'zoom-in';
+        img.addEventListener('click', () => openLightbox(img.src, img.alt));
+    });
+
+    // === Number counter pros stats ===
+    function animateNumber(el, target, duration = 1000) {
+        const start = performance.now();
+        const startVal = 0;
+        function tick(now) {
+            const elapsed = now - start;
+            const progress = Math.min(elapsed / duration, 1);
+            // easeOutCubic
+            const eased = 1 - Math.pow(1 - progress, 3);
+            const current = startVal + (target - startVal) * eased;
+            el.textContent = Number.isInteger(target)
+                ? Math.round(current)
+                : current.toFixed(1);
+            if (progress < 1) requestAnimationFrame(tick);
+            else el.textContent = target;
+        }
+        requestAnimationFrame(tick);
+    }
+
+    document.querySelectorAll('.stat .num').forEach(el => {
+        const raw = el.textContent.trim();
+        const target = parseFloat(raw);
+        if (isNaN(target)) return;
+        // Aguarda animação de entrada terminar antes do counter
+        setTimeout(() => animateNumber(el, target, 1200), 300);
+    });
+
+    // === Scroll reveal pra sections fora da viewport inicial ===
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.animation = 'fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both';
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.1, rootMargin: '0px 0px -80px 0px' });
+
+    // Observa cards que entram via scroll (não os primeiros 6 que já animam no load)
+    document.querySelectorAll('.main-content > .card').forEach((card, i) => {
+        if (i < 6) return;
+        card.style.opacity = '0';
+        observer.observe(card);
+    });
+
+    // ============== Filtered counter ==============
+    function updateVisibleCount() {
+        const all = document.querySelectorAll('tbody tr');
+        const visible = Array.from(all).filter(tr => {
+            const display = window.getComputedStyle(tr).display;
+            return display !== 'none';
+        }).length;
+        const el = document.getElementById('visible-count');
+        if (el) {
+            el.textContent = all.length === visible
+                ? `${all.length.toLocaleString('pt-BR')} hits`
+                : `${visible.toLocaleString('pt-BR')} de ${all.length.toLocaleString('pt-BR')} hits visíveis`;
+        }
+    }
+    updateVisibleCount();
+    // Hook nas mudanças de filtro
+    const originalSearch = search;
+    if (originalSearch) {
+        originalSearch.addEventListener('input', () => setTimeout(updateVisibleCount, 0));
+    }
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => setTimeout(updateVisibleCount, 0));
+    });
+
+    // ============== Accordion animation ==============
+    (function() {
+        const anims = new WeakMap();
+        function animateDetails(det, opening) {
+            const prev = anims.get(det);
+            if (prev) { prev.cancel(); anims.delete(det); }
+            if (opening) {
+                det.open = true;
+                const full = det.scrollHeight + 'px';
+                const top  = det.querySelector('summary').scrollHeight + 'px';
+                det.style.overflow = 'hidden';
+                const a = det.animate([{ height: top }, { height: full }],
+                    { duration: 220, easing: 'cubic-bezier(0.16,1,0.3,1)' });
+                anims.set(det, a);
+                a.onfinish = () => { det.style.overflow = ''; det.style.height = ''; anims.delete(det); };
+            } else {
+                const start = det.scrollHeight + 'px';
+                const end   = det.querySelector('summary').scrollHeight + 'px';
+                det.style.overflow = 'hidden';
+                det.style.height   = start;
+                const a = det.animate([{ height: start }, { height: end }],
+                    { duration: 180, easing: 'ease-in' });
+                anims.set(det, a);
+                a.onfinish = () => { det.open = false; det.style.overflow = ''; det.style.height = ''; anims.delete(det); };
+            }
+        }
+        document.querySelectorAll('section.card details').forEach(det => {
+            det.querySelector('summary').addEventListener('click', e => {
+                e.preventDefault();
+                animateDetails(det, !det.open);
+            });
+        });
+        // Expose for expand/collapse-all (no animation — instant)
+        window._setAllDetails = function(open) {
+            document.querySelectorAll('section.card details').forEach(d => {
+                const prev = anims.get(d);
+                if (prev) { prev.cancel(); d.style.overflow = ''; d.style.height = ''; anims.delete(d); }
+                d.open = open;
+            });
+        };
+    })();
+
+    // ============== Expand / Collapse all ==============
+    function setAllDetails(open) { window._setAllDetails(open); }
+    const expandBtn = document.getElementById('expand-all');
+    const collapseBtn = document.getElementById('collapse-all');
+    if (expandBtn) expandBtn.addEventListener('click', () => setAllDetails(true));
+    if (collapseBtn) collapseBtn.addEventListener('click', () => setAllDetails(false));
+
+    // ============== Column sort ==============
+    function sortTable(table, colKey, asc) {
+        const tbody = table.querySelector('tbody');
+        if (!tbody) return;
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        const getKey = (row) => {
+            if (colKey === 'sev')  return parseInt(row.dataset.sev || '0', 10);
+            if (colKey === 'conf') return parseInt(row.dataset.conf || '0', 10);
+            if (colKey === 'ts')   return row.dataset.ts || '';
+            // label / match: pega texto da td correspondente
+            const idx = { label: 1, match: 3 }[colKey];
+            return row.children[idx]?.textContent.trim().toLowerCase() || '';
+        };
+        rows.sort((a, b) => {
+            const ka = getKey(a), kb = getKey(b);
+            if (typeof ka === 'number') return asc ? ka - kb : kb - ka;
+            return asc ? ka.localeCompare(kb) : kb.localeCompare(ka);
+        });
+        rows.forEach(r => tbody.appendChild(r));
+    }
+
+    document.querySelectorAll('table.sortable').forEach(table => {
+        const headers = table.querySelectorAll('th.sort-col');
+        headers.forEach(th => {
+            const action = () => {
+                const key = th.dataset.sort;
+                const wasAsc = th.classList.contains('sort-asc');
+                headers.forEach(h => h.classList.remove('sort-active', 'sort-asc'));
+                th.classList.add('sort-active');
+                if (!wasAsc) th.classList.add('sort-asc');
+                sortTable(table, key, !wasAsc);
+            };
+            th.addEventListener('click', action);
+            th.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    action();
+                }
+            });
+        });
+    });
+
+    // ============== Keyboard navigation ==============
+    let currentCardIdx = -1;
+    const cardsWithHits = Array.from(document.querySelectorAll('section.card[id^="scan-"]'))
+        .filter(c => c.querySelector('tbody tr'));
+
+    function scrollToCard(idx) {
+        if (idx < 0 || idx >= cardsWithHits.length) return;
+        currentCardIdx = idx;
+        const card = cardsWithHits[idx];
+        const details = card.querySelector('details');
+        if (details) details.open = true;
+        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Highlight curto
+        card.style.transition = 'outline 0.4s';
+        card.style.outline = '2px solid rgba(255,77,79,0.4)';
+        card.style.outlineOffset = '2px';
+        setTimeout(() => { card.style.outline = ''; }, 800);
+    }
+
+    document.addEventListener('keydown', (e) => {
+        // Skip se em input/textarea
+        if (e.target.matches('input, textarea')) {
+            // Esc no search reseta
+            if (e.key === 'Escape' && e.target.id === 'search') {
+                e.target.value = '';
+                e.target.dispatchEvent(new Event('input'));
+                e.target.blur();
+            }
+            return;
+        }
+        if (e.key === '/' && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            const s = document.getElementById('search');
+            if (s) { s.focus(); s.select(); }
+        } else if (e.key === 'j' || e.key === 'J') {
+            e.preventDefault();
+            scrollToCard(Math.min(currentCardIdx + 1, cardsWithHits.length - 1));
+        } else if (e.key === 'k' || e.key === 'K') {
+            e.preventDefault();
+            scrollToCard(Math.max(currentCardIdx - 1, 0));
+        } else if (e.key === 'Escape') {
+            // Reset filters
+            const showAll = document.getElementById('show-all');
+            if (showAll) showAll.click();
+        } else if (e.key === 'e' || e.key === 'E') {
+            // E expand all, Shift+E collapse
+            if (e.shiftKey) setAllDetails(false);
+            else setAllDetails(true);
+        }
+    });
+})();
+</script>
+
+</body>
+</html>

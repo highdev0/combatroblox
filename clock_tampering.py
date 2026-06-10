@@ -13,27 +13,12 @@ corrigem o relógio pra frente — comum e legítimo).
 Lê via wevtutil (igual o check de 1102). Precisa de admin; sem admin = erro.
 """
 
+from models import _result, _item, _fmt_ts
 import subprocess
 import xml.etree.ElementTree as ET
 from datetime import datetime
 
 import win_tools
-
-
-def _result(name, description, items, error=None):
-    if error:
-        status, summary = "error", f"Erro: {error}"
-    elif items:
-        status, summary = "suspicious", f"{len(items)} item(s) suspeito(s)"
-    else:
-        status, summary = "clean", "Nenhum vestígio encontrado"
-    return {"name": name, "description": description, "status": status,
-            "items": items, "summary": summary, "error": error}
-
-
-def _item(label, detail, severity, matched, timestamp=""):
-    return {"label": label, "detail": detail, "severity": severity,
-            "matched": matched, "timestamp": timestamp}
 
 
 _JUMP_MIN_SECONDS = 600   # ignora saltos < 10 min (drift de NTP)

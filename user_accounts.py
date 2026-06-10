@@ -11,28 +11,13 @@ Leitura pura: lê o registro (ProfileList) e o mtime do NTUSER.DAT/perfil.
 Contexto, não acusação — conta atual limpa não inocenta o PC inteiro.
 """
 
+from models import _result, _item, _fmt_ts
 import os
 import winreg
 from datetime import datetime, timedelta
 
 
 # ----------------------------- helpers -----------------------------
-
-def _result(name, description, items, error=None):
-    if error:
-        status, summary = "error", f"Erro: {error}"
-    elif items:
-        status, summary = "suspicious", f"{len(items)} item(s) suspeito(s)"
-    else:
-        status, summary = "clean", "Nenhum vestígio encontrado"
-    return {"name": name, "description": description, "status": status,
-            "items": items, "summary": summary, "error": error}
-
-
-def _item(label, detail, severity, matched, timestamp=""):
-    return {"label": label, "detail": detail, "severity": severity,
-            "matched": matched, "timestamp": timestamp}
-
 
 _PROFILELIST = r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList"
 _RECENT_HOURS = 48  # outra conta usada nas últimas N horas = mais relevante
@@ -101,7 +86,17 @@ def scan_user_profiles() -> dict:
                        "Outras contas de Windows no PC (cheat pode estar na outra)",
                        [], error=f"sem acesso a ProfileList: {e}")
 
-    current = os.environ.get("USERNAME", "")
+    import ctypes
+    current = ""
+    try:
+        size = ctypes.c_uint32(256)
+        buf = ctypes.create_unicode_buffer(size.value)
+        if ctypes.windll.advapi32.GetUserNameW(buf, ctypes.byref(size)):
+            current = buf.value
+        else:
+            current = os.environ.get("USERNAME", "")
+    except Exception:
+        current = os.environ.get("USERNAME", "")
     items = []
     try:
         i = 0

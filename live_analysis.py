@@ -9,6 +9,7 @@ Cheat injetado fica EXPOSTO mesmo se o arquivo foi apagado depois,
 porque a DLL ainda tá no espaço de endereço do Roblox.
 """
 
+from models import _result, _item, _fmt_ts
 import os
 import ctypes
 from ctypes import wintypes
@@ -206,32 +207,6 @@ def _is_dll_signed(path: str) -> bool | None:
 
 
 # ============================ Helpers ============================
-
-def _result(name, description, items, error=None):
-    # Itens meta_only (ex: cabeçalho de processo) não contam como DLL suspeita
-    real_items = [i for i in items if not i.get("meta_only")]
-    if error:
-        status = "error"
-        summary = f"Erro: {error}"
-    elif not real_items:
-        status = "clean"
-        summary = "Nenhuma DLL suspeita"
-    else:
-        status = "suspicious"
-        summary = f"{len(real_items)} DLL(s) suspeita(s)"
-
-    return {
-        "name": name, "description": description, "status": status,
-        "items": items, "summary": summary, "error": error,
-    }
-
-
-def _item(label, detail, severity, matched, timestamp="", meta_only=False):
-    return {
-        "label": label, "detail": detail, "severity": severity,
-        "matched": matched, "timestamp": timestamp, "meta_only": meta_only,
-    }
-
 
 def _match_keyword(text: str):
     # Delega pro matching central (word-boundary, anti-FP).
@@ -589,14 +564,6 @@ _STRUCT_WHITELIST_SUBSTR = (
     "\\microsoft\\", "\\windows\\", "\\packages\\microsoft",
     "\\google\\", "\\discord", "\\microsoftedge",
 )
-
-
-def _fmt_ts(ts: float) -> str:
-    """epoch -> 'YYYY-MM-DD HH:MM:SS' (formato que o fp_filter/timeline parseiam)."""
-    try:
-        return datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S")
-    except (ValueError, OSError, OverflowError):
-        return ""
 
 
 def _has_embedded_runtime(folder: str, subdirs: list, files: list) -> bool:

@@ -14,6 +14,7 @@ Combina 6 sinais — mesmo se formatou há 1-2 semanas, vários ficam:
 Cada sinal pesa por idade — combinação = HIGH automático.
 """
 
+from models import _result, _item, _fmt_ts
 import os
 import re
 import subprocess
@@ -26,22 +27,6 @@ try:
     HAS_WINREG = True
 except ImportError:
     HAS_WINREG = False
-
-
-def _result(name, description, items, error=None):
-    if error:
-        status, summary = "error", f"Erro: {error}"
-    elif not items:
-        status, summary = "clean", "Sem indícios de formatação recente"
-    else:
-        status, summary = "suspicious", f"{len(items)} indício(s) de formatação"
-    return {"name": name, "description": description, "status": status,
-            "items": items, "summary": summary, "error": error}
-
-
-def _item(label, detail, severity, matched, timestamp=""):
-    return {"label": label, "detail": detail, "severity": severity,
-            "matched": matched, "timestamp": timestamp}
 
 
 def _get_install_date():

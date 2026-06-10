@@ -22,6 +22,7 @@ em vez de 'krnl', que resolve pro mesmo alias canônico).
 """
 
 import re
+import functools
 
 from database import EXECUTOR_KEYWORDS
 
@@ -75,7 +76,12 @@ def match_keyword(text):
     return None, None
 
 
-_word_cache = {}
+@functools.lru_cache(maxsize=1024)
+def _compile_word(word: str) -> re.Pattern:
+    esc = re.escape(word.lower())
+    pre = r"\b" if word[0].isalnum() else ""
+    suf = r"\b" if word[-1].isalnum() else ""
+    return re.compile(pre + esc + suf)
 
 
 def word_in_text(word: str, text: str) -> bool:
@@ -84,13 +90,7 @@ def word_in_text(word: str, text: str) -> bool:
     (ex.: CLEANER_NAMES com 'wipe'/'shred'). Cacheia o pattern por palavra."""
     if not word or not text:
         return False
-    pat = _word_cache.get(word)
-    if pat is None:
-        esc = re.escape(word.lower())
-        pre = r"\b" if word[0].isalnum() else ""
-        suf = r"\b" if word[-1].isalnum() else ""
-        pat = re.compile(pre + esc + suf)
-        _word_cache[word] = pat
+    pat = _compile_word(word)
     return bool(pat.search(text.lower()))
 
 

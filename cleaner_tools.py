@@ -13,32 +13,10 @@ Precisa de admin (Prefetch); sem admin = erro gracioso.
 Mapeia pro source 'anti_forense' (é o que é).
 """
 
+from models import _result, _item, _fmt_ts
 import os
 import re
 from datetime import datetime
-
-
-def _result(name, description, items, error=None):
-    if error:
-        status, summary = "error", f"Erro: {error}"
-    elif items:
-        status, summary = "suspicious", f"{len(items)} item(s) suspeito(s)"
-    else:
-        status, summary = "clean", "Nenhum vestígio encontrado"
-    return {"name": name, "description": description, "status": status,
-            "items": items, "summary": summary, "error": error}
-
-
-def _item(label, detail, severity, matched, timestamp=""):
-    return {"label": label, "detail": detail, "severity": severity,
-            "matched": matched, "timestamp": timestamp}
-
-
-def _fmt_ts(ts):
-    try:
-        return datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S")
-    except (ValueError, OSError, OverflowError):
-        return ""
 
 
 _PREFETCH = r"C:\Windows\Prefetch"
